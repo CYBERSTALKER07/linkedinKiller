@@ -5,9 +5,8 @@ import { useTheme } from '../context/ThemeContext';
 import PageLayout from '../components/ui/PageLayout';
 import { Card } from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import { Calendar, MapPin, Building2, User, CheckCircle2, XCircle, AlertCircle, Timer, Filter } from 'lucide-react';
+import { MapPin, Building2, AlertCircle, Filter } from 'lucide-react';
 import { cn } from '../lib/cva';
-import { format } from 'date-fns';
 
 export default function AdminApplicationsPage() {
     const { isDark } = useTheme();
@@ -187,7 +186,7 @@ export default function AdminApplicationsPage() {
                                 {/* Actions */}
                                 <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-200 dark:border-gray-800">
                                     <Button
-                                        size="sm"
+                                        size="small"
                                         variant="outlined"
                                         onClick={() => updateStatusMutation.mutate({ id: application.id, status: 'interview' })}
                                         disabled={application.status === 'interview'}
@@ -196,7 +195,7 @@ export default function AdminApplicationsPage() {
                                         Interview
                                     </Button>
                                     <Button
-                                        size="sm"
+                                        size="small"
                                         variant="outlined"
                                         onClick={() => updateStatusMutation.mutate({ id: application.id, status: 'accepted' })}
                                         disabled={application.status === 'accepted'}
@@ -208,7 +207,7 @@ export default function AdminApplicationsPage() {
                                         Accept
                                     </Button>
                                     <Button
-                                        size="sm"
+                                        size="small"
                                         variant="outlined"
                                         onClick={() => updateStatusMutation.mutate({ id: application.id, status: 'rejected' })}
                                         disabled={application.status === 'rejected'}

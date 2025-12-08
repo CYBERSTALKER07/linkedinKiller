@@ -179,11 +179,15 @@ export interface Database {
           requirements: string[] | null;
           skills: string[] | null;
           status: string;
-          posted_at: string;
+          posted_date: string;
           deadline: string | null;
           company: string | null;
           benefits: string | null;
           experience_level: string | null;
+          department: string | null;
+          country: string | null;
+          city: string | null;
+          street_address: string | null;
         };
         Insert: {
           id?: string;
@@ -197,11 +201,15 @@ export interface Database {
           requirements?: string[] | null;
           skills?: string[] | null;
           status?: string;
-          posted_at?: string;
+          posted_date?: string;
           deadline?: string | null;
           company?: string | null;
           benefits?: string | null;
           experience_level?: string | null;
+          department?: string | null;
+          country?: string | null;
+          city?: string | null;
+          street_address?: string | null;
         };
         Update: {
           id?: string;
@@ -215,11 +223,15 @@ export interface Database {
           requirements?: string[] | null;
           skills?: string[] | null;
           status?: string;
-          posted_at?: string;
+          posted_date?: string;
           deadline?: string | null;
           company?: string | null;
           benefits?: string | null;
           experience_level?: string | null;
+          department?: string | null;
+          country?: string | null;
+          city?: string | null;
+          street_address?: string | null;
         };
       };
       applications: {
@@ -228,7 +240,7 @@ export interface Database {
           job_id: string;
           student_id: string;
           cover_letter: string | null;
-          applied_at: string;
+          applied_date: string;
           status: string;
         };
         Insert: {
@@ -236,7 +248,7 @@ export interface Database {
           job_id: string;
           student_id: string;
           cover_letter?: string | null;
-          applied_at?: string;
+          applied_date?: string;
           status?: string;
         };
         Update: {
@@ -244,8 +256,76 @@ export interface Database {
           job_id?: string;
           student_id?: string;
           cover_letter?: string | null;
-          applied_at?: string;
+          applied_date?: string;
           status?: string;
+        };
+      };
+      employer_events: {
+        Row: {
+          id: string;
+          employer_id: string;
+          title: string;
+          description: string;
+          event_date: string;
+          event_end_date: string | null;
+          location: string | null;
+          country: string | null;
+          city: string | null;
+          street_address: string | null;
+          virtual_link: string | null;
+          event_type: string;
+          banner_image_url: string | null;
+          capacity: number | null;
+          attendees_count: number;
+          is_featured: boolean;
+          status: string;
+          tags: string[] | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          employer_id: string;
+          title: string;
+          description: string;
+          event_date: string;
+          event_end_date?: string | null;
+          location?: string | null;
+          country?: string | null;
+          city?: string | null;
+          street_address?: string | null;
+          virtual_link?: string | null;
+          event_type: string;
+          banner_image_url?: string | null;
+          capacity?: number | null;
+          attendees_count?: number;
+          is_featured?: boolean;
+          status?: string;
+          tags?: string[] | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          employer_id?: string;
+          title?: string;
+          description?: string;
+          event_date?: string;
+          event_end_date?: string | null;
+          location?: string | null;
+          country?: string | null;
+          city?: string | null;
+          street_address?: string | null;
+          virtual_link?: string | null;
+          event_type?: string;
+          banner_image_url?: string | null;
+          capacity?: number | null;
+          attendees_count?: number;
+          is_featured?: boolean;
+          status?: string;
+          tags?: string[] | null;
+          created_at?: string;
+          updated_at?: string;
         };
       };
     };

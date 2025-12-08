@@ -1,11 +1,11 @@
 import React, { useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
-import { 
-  LocationOn, 
-  Schedule, 
-  People, 
-  AttachMoney, 
-  School, 
+import {
+  LocationOn,
+  Schedule,
+  People,
+  AttachMoney,
+  School,
   Work,
   Visibility,
   RocketLaunch,
@@ -64,7 +64,7 @@ interface JobCardProps {
     posted_date: string;
     description: string;
     requirements?: string[];
-    applicants_count?: number;
+    applications_count?: number;
   };
   onView: () => void;
   onApply: () => void;
@@ -123,14 +123,14 @@ export const Card: React.FC<CardProps> = ({
 
   const variantClasses = {
     default: 'bg-white dark:bg-gray-900',
-    elevated: isDark 
-      ? "bg-dark-surface shadow-elevation-1 hover:shadow-elevation-2 border-0" 
+    elevated: isDark
+      ? "bg-dark-surface shadow-elevation-1 hover:shadow-elevation-2 border-0"
       : "bg-surface-50 shadow-elevation-1 hover:shadow-elevation-2 border-0",
-    filled: isDark 
-      ? "bg-dark-bg border-0 shadow-none" 
+    filled: isDark
+      ? "bg-dark-bg border-0 shadow-none"
       : "bg-surface-200 border-0 shadow-none",
-    outlined: isDark 
-      ? "bg-dark-surface border border-gray-600 shadow-none hover:shadow-elevation-1" 
+    outlined: isDark
+      ? "bg-dark-surface border border-gray-600 shadow-none hover:shadow-elevation-1"
       : "bg-surface-50 border border-gray-200 shadow-none hover:shadow-elevation-1",
     'x-style': 'border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-black'
   };
@@ -142,8 +142,8 @@ export const Card: React.FC<CardProps> = ({
     lg: 'p-6'
   };
 
-  const interactiveClasses = interactive 
-    ? "hover:scale-[1.02] active:scale-[0.98] transform" 
+  const interactiveClasses = interactive
+    ? "hover:scale-[1.02] active:scale-[0.98] transform"
     : "";
 
   const hoverClasses = hover && variant === 'x-style' ? 'hover:bg-gray-50/50 dark:hover:bg-gray-950/50' : '';
@@ -158,8 +158,8 @@ export const Card: React.FC<CardProps> = ({
   );
 
   return (
-    <div 
-      ref={cardRef} 
+    <div
+      ref={cardRef}
       className={cardClasses}
       onClick={clickable ? onClick : undefined}
       role={clickable ? "button" : undefined}
@@ -184,7 +184,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
   trendValue
 }) => {
   const { isDark } = useTheme();
-  
+
   const colorClasses = {
     primary: isDark ? 'text-lime' : 'text-lime',
     secondary: isDark ? 'text-secondary-300' : 'text-secondary-600',
@@ -222,20 +222,17 @@ export const StatsCard: React.FC<StatsCardProps> = ({
     >
       <div className="flex items-center justify-between">
         <div className="flex-1">
-          <p className={`text-label-medium font-medium ${
-            isDark ? 'text-dark-muted' : 'text-gray-600'
-          }`}>
+          <p className={`text-label-medium font-medium ${isDark ? 'text-dark-muted' : 'text-gray-600'
+            }`}>
             {title}
           </p>
-          <p className={`text-display-small font-normal mt-1 ${
-            isDark ? 'text-dark-text' : 'text-gray-900'
-          }`}>
+          <p className={`text-display-small font-normal mt-1 ${isDark ? 'text-dark-text' : 'text-gray-900'
+            }`}>
             {value}
           </p>
           {subtitle && (
-            <p className={`text-body-small mt-1 ${
-              isDark ? 'text-dark-muted' : 'text-gray-500'
-            }`}>
+            <p className={`text-body-small mt-1 ${isDark ? 'text-dark-muted' : 'text-gray-500'
+              }`}>
               {subtitle}
             </p>
           )}
@@ -247,9 +244,8 @@ export const StatsCard: React.FC<StatsCardProps> = ({
           )}
         </div>
         {Icon && (
-          <div className={`p-4 rounded-2xl ${
-            iconBackgroundClasses[color]
-          } group-hover:scale-110 transition-transform duration-200`}>
+          <div className={`p-4 rounded-2xl ${iconBackgroundClasses[color]
+            } group-hover:scale-110 transition-transform duration-200`}>
             <Icon className={`h-8 w-8 ${colorClasses[color]}`} />
           </div>
         )}
@@ -287,7 +283,7 @@ export const JobCard: React.FC<JobCardProps> = ({
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - date.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 1) return '1 day ago';
     if (diffDays < 7) return `${diffDays} days ago`;
     if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`;
@@ -295,7 +291,7 @@ export const JobCard: React.FC<JobCardProps> = ({
   };
 
   return (
-    <Card 
+    <Card
       variant="elevated"
       className={`group ${className}`}
       interactive
@@ -307,51 +303,44 @@ export const JobCard: React.FC<JobCardProps> = ({
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center space-x-2 mb-2">
-              <Badge 
+              <Badge
                 color={getJobTypeColor(job.type) as any}
                 variant="tonal"
                 className="capitalize"
               >
                 {job.type.replace('-', ' ')}
               </Badge>
-              {job.applicants_count && job.applicants_count > 50 && (
+              {job.applications_count && job.applications_count > 50 && (
                 <Badge color="error" variant="outlined">
                   <Star className="h-3 w-3 mr-1" />
                   Popular
                 </Badge>
               )}
             </div>
-            <h3 className={`text-title-large font-medium mb-1 group-hover:${
-              isDark ? 'text-lime' : 'text-lime'
-            } transition-colors ${
-              isDark ? 'text-dark-text' : 'text-gray-900'
-            }`}>
+            <h3 className={`text-title-large font-medium mb-1 group-hover:${isDark ? 'text-lime' : 'text-lime'
+              } transition-colors ${isDark ? 'text-dark-text' : 'text-gray-900'
+              }`}>
               {job.title}
             </h3>
             <div className="flex items-center space-x-1 mb-2">
-              <Business className={`h-4 w-4 ${
-                isDark ? 'text-dark-muted' : 'text-gray-500'
-              }`} />
-              <p className={`text-body-medium font-medium ${
-                isDark ? 'text-lime' : 'text-lime'
-              }`}>
+              <Business className={`h-4 w-4 ${isDark ? 'text-dark-muted' : 'text-gray-500'
+                }`} />
+              <p className={`text-body-medium font-medium ${isDark ? 'text-lime' : 'text-lime'
+                }`}>
                 {job.company}
               </p>
             </div>
           </div>
-          <div className={`p-3 rounded-xl ${
-            isDark ? 'bg-lime/10' : 'bg-lime/10'
-          } group-hover:scale-110 transition-transform duration-200`}>
-            <Work className={`h-6 w-6 ${
-              isDark ? 'text-lime' : 'text-lime'
-            }`} />
+          <div className={`p-3 rounded-xl ${isDark ? 'bg-lime/10' : 'bg-lime/10'
+            } group-hover:scale-110 transition-transform duration-200`}>
+            <Work className={`h-6 w-6 ${isDark ? 'text-lime' : 'text-lime'
+              }`} />
           </div>
         </div>
 
         {/* Job Details */}
-        <div className={`flex flex-wrap items-center gap-4 text-body-medium ${
-          isDark ? 'text-dark-muted' : 'text-gray-600'
-        }`}>
+        <div className={`flex flex-wrap items-center gap-4 text-body-medium ${isDark ? 'text-dark-muted' : 'text-gray-600'
+          }`}>
           <div className="flex items-center space-x-1">
             <LocationOn className="h-4 w-4" />
             <span>{job.location}</span>
@@ -366,18 +355,17 @@ export const JobCard: React.FC<JobCardProps> = ({
               <span>{job.salary_range}</span>
             </div>
           )}
-          {job.applicants_count && (
+          {job.applications_count && (
             <div className="flex items-center space-x-1">
               <People className="h-4 w-4" />
-              <span>{job.applicants_count} applicants</span>
+              <span>{job.applications_count} applicants</span>
             </div>
           )}
         </div>
 
         {/* Description */}
-        <p className={`text-body-medium leading-relaxed line-clamp-3 ${
-          isDark ? 'text-dark-muted' : 'text-gray-600'
-        }`}>
+        <p className={`text-body-medium leading-relaxed line-clamp-3 ${isDark ? 'text-dark-muted' : 'text-gray-600'
+          }`}>
           {job.description}
         </p>
 
@@ -387,19 +375,17 @@ export const JobCard: React.FC<JobCardProps> = ({
             {job.requirements.slice(0, 3).map((req, index) => (
               <span
                 key={index}
-                className={`inline-flex items-center px-3 py-1 text-label-small rounded-full ${
-                  isDark 
-                    ? 'bg-dark-bg text-dark-text border border-gray-600' 
-                    : 'bg-surface-200 text-gray-700 border border-gray-200'
-                }`}
+                className={`inline-flex items-center px-3 py-1 text-label-small rounded-full ${isDark
+                  ? 'bg-dark-bg text-dark-text border border-gray-600'
+                  : 'bg-surface-200 text-gray-700 border border-gray-200'
+                  }`}
               >
                 {req}
               </span>
             ))}
             {job.requirements.length > 3 && (
-              <span className={`text-label-small ${
-                isDark ? 'text-dark-muted' : 'text-gray-500'
-              }`}>
+              <span className={`text-label-small ${isDark ? 'text-dark-muted' : 'text-gray-500'
+                }`}>
                 +{job.requirements.length - 3} more
               </span>
             )}

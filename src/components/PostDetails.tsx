@@ -57,6 +57,25 @@ interface PostDetail {
   tags?: string[];
   location?: string;
   media_description?: string;
+  is_retweet?: boolean;
+  is_quote_retweet?: boolean;
+  original_post?: {
+    id: string;
+    content: string;
+    author: {
+      id: string;
+      full_name: string;
+      avatar_url?: string;
+      username?: string;
+      verified: boolean;
+    };
+    created_at: string;
+    media?: {
+      type: 'image' | 'video';
+      url: string;
+      alt?: string;
+    }[];
+  };
 }
 
 import { useBreakpoint } from '@openai/apps-sdk-ui/hooks/useBreakpoints';
@@ -79,13 +98,8 @@ export default function PostDetails() {
 
   const [isLikeLoading, setIsLikeLoading] = useState(false);
 
-  // Extract the real post ID (remove retweet_ prefix if present)
-  const effectivePostId = postId?.startsWith('retweet_')
-    ? postId.substring(8)
-    : postId;
-
   // Use the new usePostDetail hook
-  const { data: postData, isLoading: loading, error } = usePostDetail(effectivePostId, user?.id);
+  const { data: postData, isLoading: loading, error } = usePostDetail(postId, user?.id);
   const likePostMutation = useLikePost();
   const unlikePostMutation = useUnlikePost();
 
@@ -215,6 +229,10 @@ export default function PostDetails() {
     );
   }
 
+  // Determine display author and content based on retweet status
+  const isSimpleRetweet = post.is_retweet && !post.is_quote_retweet;
+  const displayAuthor = isSimpleRetweet && post.original_post ? post.original_post.author : post.author;
+
   return (
     <PageLayout
       className={cn(
@@ -264,13 +282,21 @@ export default function PostDetails() {
               'p-4 border-b',
               isDark ? 'border-gray-800' : 'border-gray-200'
             )}>
+              {/* Retweet Header */}
+              {isSimpleRetweet && (
+                <div className="flex items-center text-gray-500 text-sm mb-2 ml-12">
+                  <Repeat2 className="w-4 h-4 mr-2" />
+                  <span>Retweeted by {post.author.full_name}</span>
+                </div>
+              )}
+
               <div className="flex space-x-3">
                 {/* Author Avatar */}
-                <Link to={`/profile/${post.author.id}`} onClick={(e) => e.stopPropagation()}>
+                <Link to={`/profile/${displayAuthor.id}`} onClick={(e) => e.stopPropagation()}>
                   <Avatar
-                    src={post.author.avatar_url}
-                    alt={post.author.full_name}
-                    name={post.author.full_name}
+                    src={displayAuthor.avatar_url}
+                    alt={displayAuthor.full_name}
+                    name={displayAuthor.full_name}
                     size="lg"
                     className="shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
                   />
@@ -282,16 +308,16 @@ export default function PostDetails() {
                   {/* Author Info */}
                   <div className="flex items-center space-x-2 mb-2">
                     <Link
-                      to={`/profile/${post.author.id}`}
+                      to={`/profile/${displayAuthor.id}`}
                       className="font-bold hover:underline text-lg"
                     >
-                      {post.author.full_name}
+                      {displayAuthor.full_name}
                     </Link>
-                    {post.author.verified && (
+                    {displayAuthor.verified && (
                       <CheckCircle className="w-5 h-5 text-info-500" />
                     )}
                     <span className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>
-                      @{post.author.full_name.toLowerCase().replace(/\s+/g, '')}
+                      @{displayAuthor.full_name.toLowerCase().replace(/\s+/g, '')}
                     </span>
                   </div>
 
@@ -301,6 +327,31 @@ export default function PostDetails() {
                       {post.content}
                     </p>
                   </div>
+
+                  {/* Quote Retweet Embedded Post */}
+                  {post.is_quote_retweet && post.original_post && (
+                    <div className={cn(
+                      'mb-4 rounded-xl border p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors',
+                      isDark ? 'border-gray-700' : 'border-gray-200'
+                    )} onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/post/${post.original_post!.id}`);
+                    }}>
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Avatar
+                          src={post.original_post.author.avatar_url}
+                          name={post.original_post.author.full_name}
+                          size="sm"
+                        />
+                        <span className="font-bold text-sm">{post.original_post.author.full_name}</span>
+                        <span className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
+                          @{post.original_post.author.username || post.original_post.author.full_name.toLowerCase().replace(/\s+/g, '')}
+                        </span>
+                      </div>
+                      <p className="text-base mb-2">{post.original_post.content}</p>
+                      {/* We could show media here too if needed */}
+                    </div>
+                  )}
 
                   {/* Tags */}
                   {post.tags && post.tags.length > 0 && (
@@ -422,7 +473,7 @@ export default function PostDetails() {
                     </Button>
 
                     <Button
-                      onClick={() => navigate(`/post/${effectivePostId}/answers`)}
+                      onClick={() => navigate(`/post/${postId}/answers`)}
                       className={cn(
                         'flex items-center space-x-2 px-4 py-2 rounded-full transition-colors',
                         isDark
@@ -532,7 +583,7 @@ export default function PostDetails() {
             {/* Comments Section - Mobile/Tablet */}
             {isMobile && (
               <div id="comments-section">
-                <Comments postId={effectivePostId!} className={cn('border-t', isDark ? 'border-gray-800' : 'border-gray-200')} />
+                <Comments postId={postId!} className={cn('border-t', isDark ? 'border-gray-800' : 'border-gray-200')} />
               </div>
             )}
           </div>
@@ -545,7 +596,7 @@ export default function PostDetails() {
             isDark ? 'border-gray-800' : 'border-gray-200'
           )}>
             <div id="comments-section" className="h-full">
-              <Comments postId={effectivePostId!} className="h-full" />
+              <Comments postId={postId!} className="h-full" />
             </div>
           </aside>
         )}

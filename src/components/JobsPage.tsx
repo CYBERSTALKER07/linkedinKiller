@@ -13,6 +13,7 @@ import { useJobs } from '../hooks/useJobs';
 import Animate from './ui/Animate';
 import { useBreakpoint } from '@openai/apps-sdk-ui/hooks/useBreakpoints';
 import JobCard from './JobCard';
+import { ApplicationModal } from './student-cv/ApplicationModal';
 
 // ==========================================
 // 2. SIDEBAR PREVIEW CARD (Floating)
@@ -80,32 +81,25 @@ const PreviewCard = ({ title, company, location, salary, description, tags, logo
 // ==========================================
 
 // Best Matches
-const BestMatchesWidget = ({ isDark }: { isDark: boolean }) => {
-  const matches = [
-    {
-      title: "Brand Strategist",
-      company: "Apple Inc.",
-      location: "California, USA",
-      match: 98,
-      logoColor: "bg-black text-white",
-      logo: "https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg"
-    },
-    {
-      title: "Product Manager",
-      company: "Wallet App",
-      location: "New York, USA",
-      match: 85,
-      logoColor: "bg-pink-100 text-pink-600",
-      logo: null
-    },
-  ];
+const BestMatchesWidget = ({ isDark, jobs }: { isDark: boolean; jobs: any[] }) => {
+  // Use first 3 jobs as "best matches" for now
+  const matches = jobs.slice(0, 3).map(job => ({
+    title: job.title,
+    company: job.company || job.employer?.company_name || 'Inc.',
+    location: job.location,
+    match: Math.floor(Math.random() * (99 - 85) + 85), // Random high match score for demo
+    logo: job.employer?.avatar_url || null,
+    logoColor: isDark ? "bg-gray-800 text-white" : "bg-gray-100 text-gray-900"
+  }));
+
+  if (matches.length === 0) return null;
 
   return (
     <div className={cn(
       "p-6 rounded-[2.5rem] border shadow-xs transition-all mb-6",
       isDark ? "bg-black border-gray-800" : "bg-white border-white shadow-gray-200/50"
     )}>
-      <h3 className={cn("font-bold text-xl mb-6", isDark ? "text-white" : "text-gray-900")}>
+      <h3 className={cn("font-bold text-2xl  mb-6 font-serif", isDark ? "text-white" : "text-gray-900")}>
         Best Matches
       </h3>
       <div className="space-y-6">
@@ -117,30 +111,20 @@ const BestMatchesWidget = ({ isDark }: { isDark: boolean }) => {
               company={job.company}
               location={job.location}
               logo={job.logo}
-              salary="$120k - $150k"
+              salary="Competitive"
               tags={['Full Time', 'Match']}
             />
             <div className="flex items-start gap-4 mb-3">
               <div className={cn(
-                "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-lg font-bold transition-transform group-hover:scale-110 shadow-sm",
+                "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-lg font-bold transition-transform group-hover:scale-110 shadow-sm overflow-hidden",
                 job.logoColor,
                 isDark && !job.logo ? "bg-gray-800 text-white" : ""
               )}>
-                {job.logo ? <img src={job.logo} className="w-5 h-5 object-contain invert dark:invert-0" /> : job.company[0]}
+                {job.logo ? <img src={job.logo} className="w-full h-full object-cover" /> : job.company[0]}
               </div>
               <div className="flex-1 min-w-0">
                 <h4 className={cn("font-bold text-sm truncate", isDark ? "text-white" : "text-gray-900")}>{job.title}</h4>
                 <p className="text-xs text-gray-400 truncate">{job.company}</p>
-              </div>
-            </div>
-            {/* Match Bar */}
-            <div className={cn("p-3 rounded-xl", isDark ? "bg-gray-900" : "bg-gray-50")}>
-              <div className="flex justify-between items-end mb-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Match</span>
-                <span className={cn("text-xs font-bold", job.match > 90 ? "text-blue-500" : "text-purple-500")}>{job.match}%</span>
-              </div>
-              <div className="h-1.5 w-full bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
-                <div className={cn("h-full rounded-full", job.match > 90 ? "bg-blue-500" : "bg-purple-500")} style={{ width: `${job.match}%` }} />
               </div>
             </div>
           </div>
@@ -151,28 +135,27 @@ const BestMatchesWidget = ({ isDark }: { isDark: boolean }) => {
 };
 
 // Job Status
-const JobStatusWidget = ({ isDark }: { isDark: boolean }) => {
-  const activeJobs = [
-    { title: "Sr Product Designer", company: "Neo", location: "Calgary, Canada", hours: "48hrs / week", logo: "https://upload.wikimedia.org/wikipedia/commons/2/24/Neo_logo.svg", bg: "bg-black" },
-    { title: "Jr UX/UI Designer", company: "Adobe", location: "UK, (Remote)", hours: "32hrs / week", logo: "https://upload.wikimedia.org/wikipedia/commons/d/d2/Adobe_Corporate_Logo.png", bg: "bg-red-600" },
-    { title: "Freelance UI Designer", company: "Dice", location: "US, (Remote)", hours: "40hrs / week", logo: null, bg: "bg-black" }
-  ];
+const JobStatusWidget = ({ isDark, jobs }: { isDark: boolean; jobs: any[] }) => {
+  const activeJobs = jobs.slice(0, 3).map(job => ({
+    title: job.title,
+    company: job.company || 'Unknown',
+    location: job.location,
+    hours: job.type || 'Full Time',
+    logo: job.employer?.avatar_url || null,
+    bg: isDark ? "bg-gray-800" : "bg-gray-100 text-gray-900"
+  }));
 
-  const closedJobs = [
-    { title: "3D Designer", company: "Jit", location: "Kolin, Georgia", hours: "20hrs / week", logo: null, bg: "bg-orange-400" }
-  ];
+  if (activeJobs.length === 0) return null;
 
   return (
     <div className={cn(
       "p-8 rounded-[2.5rem] border shadow-xs mb-6",
       isDark ? "bg-black border-gray-800" : "bg-white border-white shadow-gray-200/50"
     )}>
-      <h3 className={cn("font-bold text-2xl mb-6", isDark ? "text-white" : "text-black")}>
-        Job Status
-      </h3>
+
       <div className="mb-8">
-        <h4 className="text-green-600 font-bold text-lg mb-4 flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+        <h4 className="text-black font-bold font-serif text-2xl mb-4 flex items-center gap-2">
+          {/* <span className="w-2 h-2 rounded-full bg-black animate-pulse" /> */}
           Active Jobs
         </h4>
         <div className="space-y-6">
@@ -187,10 +170,11 @@ const JobStatusWidget = ({ isDark }: { isDark: boolean }) => {
                 salary={job.hours}
               />
               <div className={cn(
-                "w-12 h-12 rounded-full flex items-center justify-center shrink-0 text-white font-bold text-xl overflow-hidden",
-                job.bg
+                "w-12 h-12 rounded-full flex items-center justify-center shrink-0 font-bold text-xl overflow-hidden",
+                job.bg,
+                isDark && !job.logo ? "text-white" : "text-gray-900"
               )}>
-                {job.logo ? <img src={job.logo} className="w-full h-full object-cover" /> : "D"}
+                {job.logo ? <img src={job.logo} className="w-full h-full object-cover" /> : job.company[0]}
               </div>
               <div>
                 <h5 className={cn("font-bold text-base", isDark ? "text-white" : "text-black")}>{job.title}</h5>
@@ -201,45 +185,33 @@ const JobStatusWidget = ({ isDark }: { isDark: boolean }) => {
           ))}
         </div>
       </div>
-      <div>
-        <h4 className="text-red-500 font-bold text-lg mb-4 opacity-80">Closed</h4>
-        <div className="space-y-6">
-          {closedJobs.map((job, i) => (
-            <div key={i} className="flex items-center gap-4 group relative cursor-pointer grayscale hover:grayscale-0 transition-all opacity-70 hover:opacity-100">
-              <PreviewCard
-                isDark={isDark}
-                title={job.title}
-                company={job.company}
-                location={job.location}
-                tags={['Closed']}
-                salary={job.hours}
-              />
-              <div className={cn(
-                "w-12 h-12 rounded-full flex items-center justify-center shrink-0 text-white font-bold text-xl",
-                job.bg
-              )}>
-                Jt
-              </div>
-              <div>
-                <h5 className={cn("font-bold text-base", isDark ? "text-white" : "text-black")}>{job.title}</h5>
-                <p className="text-sm text-gray-400">{job.location}</p>
-                <p className="text-xs font-medium mt-0.5 text-gray-500">{job.hours}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 };
 
 // Widget: Employers
-const EmployersWidget = ({ isDark }: { isDark: boolean }) => {
-  const employers = [
-    { name: "Google", items: 12, logo: "https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" },
-    { name: "Airbnb", items: 5, logo: "https://upload.wikimedia.org/wikipedia/commons/6/69/Airbnb_Logo_B%C3%A9lo.svg" },
-    { name: "Figma", items: 8, logo: "https://upload.wikimedia.org/wikipedia/commons/3/33/Figma-logo.svg" }
-  ];
+const EmployersWidget = ({ isDark, jobs }: { isDark: boolean; jobs: any[] }) => {
+  const employerCounts = jobs.reduce((acc: any, job) => {
+    const id = job.employer_id;
+    if (!id || !job.employer) return acc;
+
+    if (!acc[id]) {
+      acc[id] = {
+        name: job.employer.name || job.employer.company_name || 'Unknown',
+        logo: job.employer.avatar_url || null,
+        items: 0,
+        id: id
+      };
+    }
+    acc[id].items++;
+    return acc;
+  }, {});
+
+  const employers = Object.values(employerCounts)
+    .sort((a: any, b: any) => b.items - a.items)
+    .slice(0, 3) as any[];
+
+  if (employers.length === 0) return null;
 
   return (
     <div className={cn(
@@ -257,7 +229,6 @@ const EmployersWidget = ({ isDark }: { isDark: boolean }) => {
       <div className="space-y-4">
         {employers.map((emp, i) => (
           <div key={i} className="flex items-center justify-between group relative cursor-pointer p-2 hover:bg-gray-50 dark:hover:bg-gray-900 rounded-2xl transition-colors">
-            {/* Employer Preview */}
             <div className={cn(
               "absolute right-[105%] top-1/2 -translate-y-1/2 w-64 p-5 rounded-3xl shadow-2xl backdrop-blur-xl border z-[999]",
               "transition-all duration-300 ease-out origin-right pointer-events-none opacity-0 translate-x-8 scale-95",
@@ -265,11 +236,11 @@ const EmployersWidget = ({ isDark }: { isDark: boolean }) => {
               isDark ? "bg-gray-900/95 border-gray-700 text-white" : "bg-white/95 border-white text-black"
             )}>
               <div className="flex items-center gap-3 mb-3">
-                <img src={emp.logo} className="w-8 h-8 object-contain" />
+                {emp.logo ? <img src={emp.logo} className="w-8 h-8 object-contain" /> : <div className="w-8 h-8 flex items-center justify-center font-bold bg-gray-200 rounded">{emp.name[0]}</div>}
                 <span className="font-bold text-lg">{emp.name}</span>
               </div>
               <p className="text-xs mb-4 opacity-70 leading-relaxed">
-                A leading technology company shaping the future. Follow to get updates on new roles.
+                {emp.items} open roles available.
               </p>
               <button className="w-full py-2 rounded-xl bg-blue-500 text-white text-xs font-bold shadow-lg shadow-blue-500/20">
                 View Company Page
@@ -278,10 +249,10 @@ const EmployersWidget = ({ isDark }: { isDark: boolean }) => {
 
             <div className="flex items-center gap-3">
               <div className={cn(
-                "w-10 h-10 rounded-full flex items-center justify-center p-2 border",
+                "w-10 h-10 rounded-full flex items-center justify-center p-2 border overflow-hidden",
                 isDark ? "bg-white border-gray-700" : "bg-white border-gray-100"
               )}>
-                <img src={emp.logo} className="w-full h-full object-contain" />
+                {emp.logo ? <img src={emp.logo} className="w-full h-full object-contain" /> : <span className="text-black font-bold">{emp.name[0]}</span>}
               </div>
               <div>
                 <p className={cn("font-bold text-sm", isDark ? "text-white" : "text-gray-900")}>{emp.name}</p>
@@ -308,14 +279,33 @@ export default function JobsPage() {
   const { isDark } = useTheme();
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [selectedJob, setSelectedJob] = useState<any | null>(null);
 
   const isMd = useBreakpoint('md');
   const isMobile = !isMd;
 
-  // Mock data hook
-  const { jobs: jobsData = [], loading } = useJobs();
+  const { jobs: jobsData = [], loading, error } = useJobs();
 
-  // Filter Logic
+  if (error) {
+    return (
+      <div className={cn(
+        'min-h-screen flex items-center justify-center p-4',
+        isDark ? 'bg-black text-white' : 'bg-gray-50 text-black'
+      )}>
+        <div className="text-center space-y-4">
+          <div className="text-red-500 font-bold text-xl">Error loading jobs</div>
+          <p className="text-gray-500">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const filteredJobs = (jobsData || []).filter(job => {
     const matchesSearch =
       (job.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -337,15 +327,8 @@ export default function JobsPage() {
           ----------------------------------------------------------------- */}
           <div className="lg:col-span-8 flex flex-col gap-6 z-10">
 
-            {/* Page Header */}
-            <div className="px-2">
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2">Find your next job</h1>
-              <p className="text-gray-500">
-                Browsing <span className="font-bold text-black dark:text-white">{filteredJobs.length}</span> active jobs
-              </p>
-            </div>
 
-            {/* Sticky Search Bar */}
+
             <div className={cn(
               "sticky top-4 z-40 p-4 rounded-[2rem] border backdrop-blur-md transition-all mb-2",
               isDark
@@ -368,7 +351,6 @@ export default function JobsPage() {
                     )}
                   />
                 </div>
-                {/* Desktop Filter Chips */}
                 <div className="hidden sm:flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
                   {['all', 'full-time', 'contract'].map(type => (
                     <button
@@ -387,7 +369,6 @@ export default function JobsPage() {
                 </div>
               </div>
 
-              {/* Mobile Filters */}
               <div className="sm:hidden mt-3 flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                 {['all', 'full-time', 'part-time', 'contract'].map(type => (
                   <button
@@ -406,15 +387,15 @@ export default function JobsPage() {
               </div>
             </div>
 
-            {/* Jobs Feed Grid */}
+            {/* Jobs Feed Grid - UPDATED TO 3 COLUMNS */}
             {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {[...Array(4)].map((_, i) => (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-6">
+                {[...Array(6)].map((_, i) => (
                   <div key={i} className={cn("h-80 rounded-[2rem] animate-pulse", isDark ? "bg-gray-900" : "bg-gray-200")} />
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2  gap-5">
                 {filteredJobs.map((job, index) => (
                   <Animate
                     key={job.id}
@@ -432,6 +413,7 @@ export default function JobsPage() {
                       skills={job.skills || []}
                       is_remote={job.is_remote}
                       employer={job.employer}
+                      onApply={() => setSelectedJob(job)}
                     />
                   </Animate>
                 ))}
@@ -448,21 +430,16 @@ export default function JobsPage() {
 
           {/* -----------------------------------------------------------------
               RIGHT COLUMN: SIDEBAR (4 Cols)
-              Z-20 ensures popups float over the feed (Z-10)
           ----------------------------------------------------------------- */}
-          <div className="hidden lg:block lg:col-span-4 relative z-20">
+          <div className={cn(
+            "hidden lg:block lg:col-span-4 w-[] relative z-20  ml-0",
+            selectedJob ? "invisible" : ""
+          )}>
             <div className="sticky top-6 pb-10">
+              <BestMatchesWidget isDark={isDark} jobs={jobsData} />
+              <JobStatusWidget isDark={isDark} jobs={jobsData} />
+              <EmployersWidget isDark={isDark} jobs={jobsData} />
 
-              {/* 1. Best Matches */}
-              <BestMatchesWidget isDark={isDark} />
-
-              {/* 2. Job Status */}
-              <JobStatusWidget isDark={isDark} />
-
-              {/* 3. Employers */}
-              <EmployersWidget isDark={isDark} />
-
-              {/* Footer */}
               <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs font-medium text-gray-400 px-6 mt-8">
                 <a href="#" className="hover:text-gray-600 transition-colors">Privacy</a>
                 <a href="#" className="hover:text-gray-600 transition-colors">Terms</a>
@@ -474,6 +451,16 @@ export default function JobsPage() {
 
         </div>
       </PageLayout>
+
+      {selectedJob && (
+        <ApplicationModal
+          isOpen={!!selectedJob}
+          onClose={() => setSelectedJob(null)}
+          jobId={selectedJob.id}
+          jobTitle={selectedJob.title}
+          employerName={selectedJob.company || selectedJob.employer?.company_name || 'Company'}
+        />
+      )}
     </div>
   );
 }

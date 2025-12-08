@@ -98,12 +98,12 @@ class LinkedInJobService {
       'r_organization_social',
       'rw_organization_admin'
     ].join(' '));
-    
+
     const state = Math.random().toString(36).substring(7);
     localStorage.setItem('linkedin_oauth_state', state);
-    
+
     const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&state=${state}`;
-    
+
     window.location.href = authUrl;
     return authUrl;
   }
@@ -238,8 +238,8 @@ class LinkedInJobService {
         listedAt: Date.now(),
         jobTitle: jobData.title,
         skills: jobData.skills.map(skill => ({ name: skill })),
-        ...(jobData.expiresAt && { 
-          expiresAt: new Date(jobData.expiresAt).getTime() 
+        ...(jobData.expiresAt && {
+          expiresAt: new Date(jobData.expiresAt).getTime()
         })
       };
 
@@ -404,15 +404,15 @@ class LinkedInJobService {
           company: linkedinJob.company,
           type: this.mapEmploymentType(linkedinJob.employmentType),
           location: linkedinJob.location,
-          salary: linkedinJob.salaryRange ? 
-            `${linkedinJob.salaryRange.currency} ${linkedinJob.salaryRange.min.toLocaleString()} - ${linkedinJob.salaryRange.max.toLocaleString()}` : 
+          salary: linkedinJob.salaryRange ?
+            `${linkedinJob.salaryRange.currency} ${linkedinJob.salaryRange.min.toLocaleString()} - ${linkedinJob.salaryRange.max.toLocaleString()}` :
             undefined,
           description: linkedinJob.description,
           requirements: [], // LinkedIn doesn't separate requirements
           skills: linkedinJob.skills || [],
           posted_date: linkedinJob.postedAt,
           deadline: linkedinJob.expiresAt,
-          applicants_count: linkedinJob.applicantCount,
+          applications_count: linkedinJob.applicantCount,
           employer_id: linkedinJob.companyId,
           status: 'active',
           views: linkedinJob.viewCount,
@@ -485,7 +485,7 @@ class LinkedInJobService {
    */
   private transformLinkedInApplication(linkedinApp: any): LinkedInApplication {
     const person = linkedinApp.person;
-    
+
     return {
       id: linkedinApp.id,
       jobId: linkedinApp.jobPosting?.id,
@@ -555,7 +555,7 @@ class LinkedInJobService {
   async syncApplications(jobId: string): Promise<void> {
     try {
       const linkedinApplications = await this.getJobApplications(jobId);
-      
+
       for (const app of linkedinApplications) {
         // Convert to platform format and save
         await this.saveApplicationToPlatform(app);

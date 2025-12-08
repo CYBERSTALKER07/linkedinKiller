@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import {
   Users,
   Eye,
@@ -11,9 +10,9 @@ import {
   MoreHorizontal,
   Clock,
   CheckCircle,
-  XCircle,
   MessageSquare,
-  Settings
+  Settings,
+  LucideIcon
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -23,16 +22,15 @@ import { cn } from '../../lib/cva';
 import PageLayout from '../ui/PageLayout';
 import PostEventForm from '../PostEventForm';
 import PostJob from '../PostJob';
-import { supabase } from '../../lib/supabase';
 
 // --- Types ---
 interface JobPosting {
   id: string;
   title: string;
   location: string;
-  status?: string;
+  status: 'open' | 'closed' | 'draft';
   applications_count?: number;
-  views_count?: number;
+  views?: number;
 }
 
 interface Applicant {
@@ -42,8 +40,8 @@ interface Applicant {
     avatar_url?: string;
     headline?: string;
   };
-  status?: string;
-  applied_at?: string;
+  status: string;
+  applied_date: string;
 }
 
 // --- Components ---
@@ -57,7 +55,7 @@ const ActivityCard = ({
 }: {
   value: number | string;
   label: string;
-  icon?: any;
+  icon?: LucideIcon;
   isDark: boolean;
 }) => (
   <div className={cn(
@@ -74,7 +72,7 @@ const ActivityCard = ({
         "p-2 rounded-full transition-colors",
         isDark ? "bg-white/5 text-gray-400 group-hover:bg-lime-400 group-hover:text-black" : "bg-gray-50 text-gray-400 group-hover:bg-black group-hover:text-white"
       )}>
-        <ArrowUpRight className="w-4 h-4" />
+        {Icon ? <Icon className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
       </div>
     </div>
     <span className={cn("text-sm font-medium", isDark ? "text-gray-500" : "text-gray-500")}>
@@ -158,7 +156,9 @@ const ApplicantRow = ({ applicant, isDark }: { applicant: Applicant, isDark: boo
     <div className="flex items-center gap-3 shrink-0">
       <div className={cn("flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium", isDark ? "bg-[#1C1C1E]" : "bg-gray-100")}>
         <Calendar className="w-3.5 h-3.5 text-gray-500" />
-        <span className={isDark ? "text-gray-300" : "text-gray-600"}>Feb 21</span>
+        <span className={isDark ? "text-gray-300" : "text-gray-600"}>
+          {new Date(applicant.applied_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+        </span>
       </div>
       <button className={cn("w-8 h-8 rounded-full flex items-center justify-center transition-colors", isDark ? "bg-[#1C1C1E] text-gray-400 hover:text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200")}>
         <Clock className="w-4 h-4" />
@@ -194,7 +194,7 @@ export default function EmployerDashboard() {
         if (jobs.length > 0) {
           let apps: Applicant[] = [];
           // Just get first few jobs' applicants for demo
-          for (let job of jobs.slice(0, 3)) {
+          for (const job of jobs.slice(0, 3)) {
             const jobApps = await getJobApplicants(job.id);
             if (jobApps) apps = [...apps, ...jobApps];
           }
@@ -204,12 +204,14 @@ export default function EmployerDashboard() {
       finally { setLoading(false); }
     };
     loadData();
-  }, [user]);
+  }, [user, fetchEmployerJobs, getJobApplicants]);
 
   // Derived Metrics
-  const totalViews = jobPostings.reduce((acc, job) => acc + (job.views_count || 0), 0);
-  const totalApps = recentApplicants.length;
-  const activeJobs = jobPostings.length;
+  const totalViews = jobPostings.reduce((acc, job) => acc + (job.views || 0), 0);
+  const totalApps = jobPostings.reduce((acc, job) => acc + (job.applications_count || 0), 0);
+  const activeJobs = jobPostings.filter(j => j.status === 'open').length;
+  const interviewsSet = recentApplicants.filter(a => a.status === 'interview').length;
+  const hires = recentApplicants.filter(a => a.status === 'hired' || a.status === 'accepted').length;
 
   if (loading) return <div className="min-h-screen bg-[#F2F2F7] dark:bg-[#000000]" />;
 
@@ -224,13 +226,13 @@ export default function EmployerDashboard() {
         {/* --- HEADER --- */}
         <div className="flex items-center justify-between mb-10">
           <h1 className="text-4xl lg:text-5xl font-bold tracking-tight">
-            Hey, {user?.user_metadata?.full_name?.split(' ')[0] || 'Recruiter'}
+            Hey, {user?.profile?.full_name?.split(' ')[0] || 'Recruiter'}
           </h1>
           <div className="flex gap-3">
             <Button variant="ghost" className="rounded-full w-10 h-10 p-0"><MessageSquare className="w-5 h-5" /></Button>
             <Button variant="ghost" className="rounded-full w-10 h-10 p-0"><Settings className="w-5 h-5" /></Button>
             <div className="w-10 h-10 rounded-full bg-gray-300 overflow-hidden">
-              <img src={user?.avatar_url} className="w-full h-full object-cover" />
+              <img src={user?.profile?.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${user?.profile?.full_name || 'User'}`} className="w-full h-full object-cover" />
             </div>
           </div>
         </div>
@@ -244,13 +246,13 @@ export default function EmployerDashboard() {
             {/* Profile Widget */}
             <div className="flex items-center gap-4 p-2">
               <div className="w-16 h-16 rounded-full bg-gray-200 overflow-hidden">
-                <img src={user?.avatar_url} className="w-full h-full object-cover" />
+                <img src={user?.profile?.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${user?.profile?.full_name || 'User'}`} className="w-full h-full object-cover" />
               </div>
               <div>
                 <h2 className={cn("text-xl font-bold", isDark ? "text-white" : "text-gray-900")}>
-                  {user?.user_metadata?.full_name}
+                  {user?.profile?.full_name}
                 </h2>
-                <p className="text-sm text-gray-500">Head of Talent Acquisition</p>
+                <p className="text-sm text-gray-500">{user?.profile?.title || 'Head of Talent Acquisition'}</p>
               </div>
               <button className={cn("ml-auto p-2 rounded-full", isDark ? "hover:bg-[#1C1C1E]" : "hover:bg-white")}>
                 <Settings className="w-5 h-5 text-gray-400" />
@@ -300,9 +302,9 @@ export default function EmployerDashboard() {
             <div>
               <h3 className={cn("text-lg font-bold mb-4", isDark ? "text-white" : "text-gray-900")}>Activities</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <ActivityCard isDark={isDark} value={totalApps} label="New Applicants" icon={Users} />
-                <ActivityCard isDark={isDark} value={12} label="Interviews Set" icon={Clock} />
-                <ActivityCard isDark={isDark} value={4} label="Offers Sent" icon={CheckCircle} />
+                <ActivityCard isDark={isDark} value={totalApps} label="Total Applicants" icon={Users} />
+                <ActivityCard isDark={isDark} value={interviewsSet} label="Interviews Set" icon={Clock} />
+                <ActivityCard isDark={isDark} value={hires} label="Hires / Offers" icon={CheckCircle} />
                 <ActivityCard isDark={isDark} value={activeJobs} label="Active Listings" icon={Briefcase} />
                 <ActivityCard isDark={isDark} value={totalViews} label="Job Views" icon={Eye} />
                 <ActivityCard isDark={isDark} value={2} label="Events Hosted" icon={Calendar} />
@@ -323,19 +325,11 @@ export default function EmployerDashboard() {
 
               <div className={cn("rounded-[32px] p-2", isDark ? "" : "")}>
                 {recentApplicants.length > 0 ? (
-                  recentApplicants.map(app => (
+                  recentApplicants.slice(0, 5).map(app => (
                     <ApplicantRow key={app.id} applicant={app} isDark={isDark} />
                   ))
                 ) : (
                   <div className="text-center py-12 text-gray-400">No active tasks or applicants.</div>
-                )}
-
-                {/* Dummy rows for visual fidelity if empty */}
-                {recentApplicants.length < 3 && (
-                  <>
-                    <ApplicantRow isDark={isDark} applicant={{ id: '1', profiles: { full_name: 'Sarah Jenning', headline: 'Product Designer' } }} />
-                    <ApplicantRow isDark={isDark} applicant={{ id: '2', profiles: { full_name: 'Mike Ross', headline: 'Legal Consultant' } }} />
-                  </>
                 )}
               </div>
             </div>

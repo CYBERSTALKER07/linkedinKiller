@@ -266,7 +266,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
                     {/* Job Recommendations */}
                     <div className={cn(
                         'rounded-3xl p-5 border shadow-xs',
-                        isDark ? 'bg-[#161819] border-[#2F3336]' : 'bg-white border-gray-100 shadow-gray-200/50'
+                        isDark ? 'bg-black border-[#2F3336]' : 'bg-white border-gray-100 shadow-gray-200/50'
                     )}>
                         <div className="flex items-center justify-between mb-4">
                             <h3 className={cn("font-bold text-xl font-serif flex items-center", isDark ? "text-white" : "text-gray-900")}>
@@ -343,7 +343,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
                     {/* Who to Follow */}
                     <div className={cn(
                         'rounded-3xl p-5 border shadow-xs',
-                        isDark ? 'bg-[#161819] border-[#2F3336]' : 'bg-white border-gray-100 shadow-gray-200/50'
+                        isDark ? 'bg-black border-[#2F3336]' : 'bg-white border-gray-100 shadow-gray-200/50'
                     )}>
                         <h3 className={cn("text-xl font-bold mb-4 flex items-center", isDark ? "text-white" : "text-gray-900")}>
                             <Users className="h-5 w-5 mr-2" />
@@ -379,7 +379,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
                             className={cn(
                                 'w-full mt-4 py-2 rounded-xl text-sm font-medium transition-colors',
                                 isDark
-                                    ? 'bg-[#2F3336] text-gray-300 hover:bg-[#3d4144] hover:text-white'
+                                    ? 'bg-black text-gray-300 hover:bg-[#3d4144] hover:text-white'
                                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900'
                             )}
                             onClick={() => navigate('/explore')}

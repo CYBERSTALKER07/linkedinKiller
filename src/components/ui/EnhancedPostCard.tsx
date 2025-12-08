@@ -3,11 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/cva';
 import InlineComments from './InlineComments';
 
-interface Post {
-  id: string;
-  replies_count: number;
-  [key: string]: unknown;
-}
+import { Post } from '../../types';
 
 interface EnhancedPostCardProps {
   children: React.ReactNode;
@@ -122,7 +118,7 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
       {/* Content */}
       {children}
 
-      {/* Inline Comments */}
+      {/* Inline Comments - shows replies to this specific post (even if it's a retweet) */}
       {post && post.replies_count > 0 && (
         <div onClick={(e) => e.stopPropagation()}>
           <InlineComments postId={post.id} totalReplies={post.replies_count} />

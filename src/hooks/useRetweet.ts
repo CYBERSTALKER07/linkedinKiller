@@ -17,12 +17,13 @@ export const useCreateRetweet = () => {
   return useMutation({
     mutationFn: async (data: RetweetData) => {
       try {
-        // Check if already retweeted - use maybeSingle() instead of single()
+        // Check if already retweeted
         const { data: existing, error: checkError } = await supabase
-          .from('post_retweets')
+          .from('posts')
           .select('id')
-          .eq('post_id', data.postId)
+          .eq('original_post_id', data.postId)
           .eq('user_id', data.userId)
+          .eq('is_retweet', true) // Ensure we only check retweets
           .maybeSingle();
 
         if (checkError && checkError.code !== 'PGRST116') {
@@ -34,28 +35,30 @@ export const useCreateRetweet = () => {
           throw new Error('Already retweeted this post');
         }
 
-        // Create retweet
+        // Create retweet as a new post
         const { data: retweet, error } = await supabase
-          .from('post_retweets')
+          .from('posts')
           .insert({
-            post_id: data.postId,
             user_id: data.userId,
-            is_quote_retweet: data.isQuoteRetweet || false,
+            content: data.quoteContent || '', // Content is empty for simple retweets, or quote content
+            is_retweet: true,
+            original_post_id: data.postId,
             quote_content: data.quoteContent || null,
+            is_quote_retweet: data.isQuoteRetweet || false,
+            visibility: 'public', // Default to public for now
+            media_type: 'text' // Default
           })
           .select()
           .single();
 
         if (error) {
           console.error('Error creating retweet:', error);
-          console.error('Error details:', {
-            code: error.code,
-            message: error.message,
-            details: error.details,
-            hint: error.hint
-          });
           throw error;
         }
+
+        // Also increment retweets_count on the original post
+        // Note: This should ideally be done via a database trigger or RPC
+        await supabase.rpc('increment_retweets_count', { post_id: data.postId });
 
         console.log('✅ Retweet created successfully:', retweet);
         return retweet;
@@ -85,15 +88,19 @@ export const useRemoveRetweet = () => {
     mutationFn: async ({ postId, userId }: { postId: string; userId: string }) => {
       try {
         const { error } = await supabase
-          .from('post_retweets')
+          .from('posts')
           .delete()
-          .eq('post_id', postId)
-          .eq('user_id', userId);
+          .eq('original_post_id', postId)
+          .eq('user_id', userId)
+          .eq('is_retweet', true);
 
         if (error) {
           console.error('Error removing retweet:', error);
           throw error;
         }
+
+        // Decrement retweets_count on the original post
+        await supabase.rpc('decrement_retweets_count', { post_id: postId });
 
         console.log('✅ Retweet removed successfully');
       } catch (error) {
@@ -123,10 +130,11 @@ export const useRetweetStatus = (postId: string, userId: string | undefined) => 
 
       try {
         const { data, error } = await supabase
-          .from('post_retweets')
+          .from('posts')
           .select('id')
-          .eq('post_id', postId)
+          .eq('original_post_id', postId)
           .eq('user_id', userId)
+          .eq('is_retweet', true)
           .maybeSingle();
 
         if (error && error.code !== 'PGRST116') {
@@ -153,12 +161,13 @@ export const usePostRetweets = (postId: string) => {
     queryFn: async () => {
       try {
         const { data, error } = await supabase
-          .from('post_retweets')
+          .from('posts')
           .select(`
             *,
-            user:user_id(id, full_name, username, avatar_url)
+            author:user_id(id, full_name, username, avatar_url)
           `)
-          .eq('post_id', postId)
+          .eq('original_post_id', postId)
+          .eq('is_retweet', true)
           .order('created_at', { ascending: false });
 
         if (error) {
@@ -184,12 +193,12 @@ export const useQuoteRetweets = (postId: string) => {
     queryFn: async () => {
       try {
         const { data, error } = await supabase
-          .from('post_retweets')
+          .from('posts')
           .select(`
             *,
-            user:user_id(id, full_name, username, avatar_url)
+            author:user_id(id, full_name, username, avatar_url)
           `)
-          .eq('post_id', postId)
+          .eq('original_post_id', postId)
           .eq('is_quote_retweet', true)
           .order('created_at', { ascending: false });
 
@@ -218,9 +227,10 @@ export const useUserRetweets = (userId: string | undefined) => {
 
       try {
         const { data, error } = await supabase
-          .from('post_retweets')
-          .select('post_id')
+          .from('posts')
+          .select('original_post_id')
           .eq('user_id', userId)
+          .eq('is_retweet', true)
           .order('created_at', { ascending: false });
 
         if (error) {
@@ -228,7 +238,7 @@ export const useUserRetweets = (userId: string | undefined) => {
           throw error;
         }
 
-        return data?.map(r => r.post_id) || [];
+        return data?.map(r => r.original_post_id) || [];
       } catch (error) {
         console.error('User retweets fetch error:', error);
         return [];

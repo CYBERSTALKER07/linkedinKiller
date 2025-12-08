@@ -77,100 +77,102 @@ export default function Comments({ postId, className }: CommentsProps) {
     }
   }, [editingComment]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    fetchComments();
-  }, [effectivePostId]);
+    const fetchComments = async () => {
+      try {
+        setLoading(true);
 
-  const fetchComments = async () => {
-    try {
-      setLoading(true);
+        // First try a simple query to check if table exists
+        const { data: commentsData, error } = await supabase
+          .from('comments')
+          .select('*')
+          .eq('post_id', effectivePostId)
+          .order('created_at', { ascending: true });
 
-      // First try a simple query to check if table exists
-      const { data: commentsData, error } = await supabase
-        .from('comments')
-        .select('*')
-        .eq('post_id', effectivePostId)
-        .order('created_at', { ascending: true });
+        if (error) {
+          console.error('Error fetching comments:', error);
 
-      if (error) {
-        console.error('Error fetching comments:', error);
-
-        // If table doesn't exist, show empty state
-        if (error.code === '42P01') {
-          console.log('Comments table does not exist yet');
-          setComments([]);
+          // If table doesn't exist, show empty state
+          if (error.code === '42P01') {
+            console.log('Comments table does not exist yet');
+            setComments([]);
+            return;
+          }
           return;
         }
-        return;
-      }
 
-      if (commentsData && commentsData.length > 0) {
-        // For each comment, try to fetch the user profile separately
-        const transformedComments: Comment[] = await Promise.all(
-          commentsData.map(async (comment) => {
-            // Try to get user profile
-            let authorData = {
-              id: comment.user_id,
-              name: 'User',
-              username: `user${comment.user_id.slice(-4)}`,
-              avatar_url: undefined,
-              verified: false
-            };
+        if (commentsData && commentsData.length > 0) {
+          // For each comment, try to fetch the user profile separately
+          const transformedComments: Comment[] = await Promise.all(
+            commentsData.map(async (comment) => {
+              // Try to get user profile
+              let authorData = {
+                id: comment.user_id,
+                name: 'User',
+                username: `user${comment.user_id.slice(-4)}`,
+                avatar_url: undefined,
+                verified: false
+              };
 
-            try {
-              const { data: profileData, error: profileError } = await supabase
-                .from('profiles')
-                .select('full_name, username, avatar_url, verified')
-                .eq('id', comment.user_id)
-                .limit(1);
+              try {
+                const { data: profileData, error: profileError } = await supabase
+                  .from('profiles')
+                  .select('full_name, username, avatar_url, verified')
+                  .eq('id', comment.user_id)
+                  .limit(1);
 
-              if (profileError) {
-                console.log('Profile query error for user:', comment.user_id, profileError);
-              } else if (profileData && profileData.length > 0) {
-                const profile = profileData[0];
-                authorData = {
-                  id: comment.user_id,
-                  name: profile.full_name || 'User',
-                  username: profile.username || `user${comment.user_id.slice(-4)}`,
-                  avatar_url: profile.avatar_url,
-                  verified: profile.verified || false
-                };
+                if (profileError) {
+                  console.log('Profile query error for user:', comment.user_id, profileError);
+                } else if (profileData && profileData.length > 0) {
+                  const profile = profileData[0];
+                  authorData = {
+                    id: comment.user_id,
+                    name: profile.full_name || 'User',
+                    username: profile.username || `user${comment.user_id.slice(-4)}`,
+                    avatar_url: profile.avatar_url,
+                    verified: profile.verified || false
+                  };
+                }
+              } catch (profileError) {
+                console.log('Error fetching profile for user:', comment.user_id, profileError);
               }
-            } catch (profileError) {
-              console.log('Error fetching profile for user:', comment.user_id, profileError);
-            }
 
-            return {
-              id: comment.id,
-              post_id: comment.post_id,
-              user_id: comment.user_id,
-              parent_id: comment.parent_id,
-              content: comment.content,
-              like_count: comment.like_count || 0,
-              reply_count: comment.reply_count || 0,
-              has_liked: false, // We'll fetch this separately if needed
-              is_edited: comment.is_edited || false,
-              updated_at: comment.updated_at,
-              created_at: comment.created_at,
-              author: authorData
-            };
-          })
-        );
+              return {
+                id: comment.id,
+                post_id: comment.post_id,
+                user_id: comment.user_id,
+                parent_id: comment.parent_id,
+                content: comment.content,
+                like_count: comment.like_count || 0,
+                reply_count: comment.reply_count || 0,
+                has_liked: false, // We'll fetch this separately if needed
+                is_edited: comment.is_edited || false,
+                updated_at: comment.updated_at,
+                created_at: comment.created_at,
+                author: authorData
+              };
+            })
+          );
 
-        // Organize comments into threaded structure
-        const organizedComments = organizeComments(transformedComments);
-        setComments(organizedComments);
-      } else {
+          // Organize comments into threaded structure
+          const organizedComments = organizeComments(transformedComments);
+          setComments(organizedComments);
+        } else {
+          setComments([]);
+        }
+      } catch (error) {
+        console.error('Error fetching comments:', error);
         setComments([]);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Error fetching comments:', error);
-      setComments([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    fetchComments();
+
+  }, [effectivePostId]);
+
+
 
   const organizeComments = (comments: Comment[]): Comment[] => {
     const commentMap = new Map<string, Comment>();
@@ -190,6 +192,21 @@ export default function Comments({ postId, className }: CommentsProps) {
         }
       } else {
         rootComments.push(commentMap.get(comment.id)!);
+      }
+    });
+
+    // Sort function: Likes > Replies > Newest
+    const sortFn = (a: Comment, b: Comment) => {
+      if (b.like_count !== a.like_count) return b.like_count - a.like_count;
+      if (b.reply_count !== a.reply_count) return b.reply_count - a.reply_count;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    };
+
+    // Sort root comments and replies
+    rootComments.sort(sortFn);
+    commentMap.forEach(comment => {
+      if (comment.replies && comment.replies.length > 0) {
+        comment.replies.sort(sortFn);
       }
     });
 
@@ -249,9 +266,9 @@ export default function Comments({ postId, className }: CommentsProps) {
         created_at: data.created_at,
         author: {
           id: user.id,
-          name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'You',
-          username: user.user_metadata?.username || user.email?.split('@')[0] || 'you',
-          avatar_url: user.user_metadata?.avatar_url,
+          name: user.profile?.full_name || user.email?.split('@')[0] || 'You',
+          username: user.profile?.username || user.email?.split('@')[0] || 'you',
+          avatar_url: user.profile?.avatar_url || undefined,
           verified: false
         },
         replies: []
@@ -274,7 +291,8 @@ export default function Comments({ postId, className }: CommentsProps) {
       if (navigator.vibrate) {
         navigator.vibrate(50);
       }
-    } catch (error) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
       console.error('Detailed error adding comment:', error);
 
       // More specific error messages
@@ -525,14 +543,14 @@ export default function Comments({ postId, className }: CommentsProps) {
                 />
                 <div className="flex space-x-2 mt-2">
                   <Button
-                    size="sm"
+                    size="small"
                     onClick={() => handleEditComment(comment.id)}
                     disabled={!editContent.trim()}
                   >
                     Save
                   </Button>
                   <Button
-                    size="sm"
+                    size="small"
                     variant="ghost"
                     onClick={() => {
                       setEditingComment(null);
@@ -553,7 +571,7 @@ export default function Comments({ postId, className }: CommentsProps) {
             <div className="flex items-center space-x-6">
               <Button
                 variant="ghost"
-                size="sm"
+                size="small"
                 onClick={() => handleLikeComment(comment.id)}
                 className={cn(
                   'flex items-center space-x-1 px-0 py-1 text-sm transition-colors',
@@ -570,7 +588,7 @@ export default function Comments({ postId, className }: CommentsProps) {
 
               <Button
                 variant="ghost"
-                size="sm"
+                size="small"
                 onClick={() => {
                   setReplyingTo(comment.id);
                   setReplyContent('');
@@ -589,7 +607,7 @@ export default function Comments({ postId, className }: CommentsProps) {
                 <>
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="small"
                     onClick={() => {
                       setEditingComment(comment.id);
                       setEditContent(comment.content);
@@ -607,7 +625,7 @@ export default function Comments({ postId, className }: CommentsProps) {
 
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="small"
                     onClick={() => handleDeleteComment(comment.id)}
                     className={cn(
                       'flex items-center space-x-1 px-0 py-1 text-sm transition-colors',
@@ -624,7 +642,7 @@ export default function Comments({ postId, className }: CommentsProps) {
 
               <Button
                 variant="ghost"
-                size="sm"
+                size="small"
                 className={cn(
                   'flex items-center space-x-1 px-0 py-1 text-sm transition-colors',
                   isDark
@@ -695,7 +713,7 @@ export default function Comments({ postId, className }: CommentsProps) {
       )}>
         <div className="flex space-x-3">
           <Avatar
-            src={user?.profile?.avatar_url}
+            src={user?.profile?.avatar_url || undefined}
             alt={user?.profile?.full_name || 'You'}
             size="md"
             className="shrink-0"
@@ -724,7 +742,7 @@ export default function Comments({ postId, className }: CommentsProps) {
                 className='rounded-md w-20 h-8'
                 onClick={() => handleAddComment()}
                 disabled={!newComment.trim() || isCommenting || newComment.length > 500}
-                size="sm"
+                size="small"
               >
                 {isCommenting ? 'Posting...' : 'Comment'}
               </Button>

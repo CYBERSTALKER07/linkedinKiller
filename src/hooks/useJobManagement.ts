@@ -18,6 +18,9 @@ interface JobFormData {
   is_remote: boolean;
   experience_level?: string;
   department?: string;
+  country?: string;
+  city?: string;
+  street_address?: string;
 }
 
 interface JobResponse extends Job {
@@ -71,6 +74,9 @@ export function useJobManagement() {
           is_remote: formData.is_remote,
           experience_level: formData.experience_level || 'entry',
           department: formData.department || null,
+          country: formData.country || null,
+          city: formData.city || null,
+          street_address: formData.street_address || null,
           status: 'open',
           posted_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
@@ -217,7 +223,12 @@ export function useJobManagement() {
 
       const { data, error: fetchError } = await supabase
         .from('jobs')
-        .select('*')
+        .select(`
+          id, title, company, company_logo, location, type, salary_range, description, 
+          requirements, benefits, skills, deadline, contact_email, experience_level, 
+          posted_at, status, views_count, created_at, updated_at, employer_id,
+          is_remote, department, country, city, street_address
+        `)
         .eq('id', jobId)
         .single();
 
@@ -251,7 +262,12 @@ export function useJobManagement() {
 
       const { data, error: fetchError } = await supabase
         .from('jobs')
-        .select('*')
+        .select(`
+          id, title, company, company_logo, location, type, salary_range, description, 
+          requirements, benefits, skills, deadline, contact_email, experience_level, 
+          posted_at, status, views_count, created_at, updated_at, employer_id,
+          is_remote, department, country, city, street_address
+        `)
         .eq('employer_id', user.id)
         .order('posted_at', { ascending: false });
 
@@ -325,7 +341,7 @@ export function useJobManagement() {
             profiles!applications_student_id_fkey(*)
           `)
           .eq('job_id', jobId)
-          .order('applied_at', { ascending: false });
+          .order('applied_date', { ascending: false });
 
         if (fetchError) {
           console.error('Error fetching applicants:', fetchError);

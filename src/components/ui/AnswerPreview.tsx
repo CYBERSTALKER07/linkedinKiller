@@ -71,7 +71,7 @@ export default function AnswerPreview({ answer, totalAnswers, postId }: AnswerPr
                     src={answer.author.avatar_url}
                     alt={answer.author.name}
                     name={answer.author.name}
-                    size="sm"
+                    size="lg"
                     className="shrink-0"
                 />
 

@@ -37,7 +37,7 @@ export default function Modal({
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
-    } else {    
+    } else {
       document.body.style.overflow = 'unset';
     }
 
@@ -76,43 +76,38 @@ export default function Modal({
   if (variant === 'full-screen-dialog') {
     return (
       <div className="fixed inset-0 z-50 overflow-y-auto">
-        <div className={`min-h-full ${
-          isDark ? 'bg-dark-surface' : 'bg-white'
-        } transition-all duration-300 ease-material-emphasized`}>
+        <div className={`min-h-full ${isDark ? 'bg-dark-surface' : 'bg-white'
+          } transition-all duration-300 ease-material-emphasized`}>
           {/* Header */}
-          <div className={`flex items-center justify-between p-6 border-b ${
-            isDark ? 'border-gray-600' : 'border-gray-200'
-          }`}>
+          <div className={`flex items-center justify-between p-6 border-b ${isDark ? 'border-gray-600' : 'border-gray-200'
+            }`}>
             <button
               onClick={onClose}
-              className={`p-2 rounded-full transition-colors duration-200 ${
-                isDark 
-                  ? 'text-dark-muted hover:text-dark-text hover:bg-gray-700' 
+              className={`p-2 rounded-full transition-colors duration-200 ${isDark
+                  ? 'text-dark-muted hover:text-dark-text hover:bg-gray-700'
                   : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-              }`}
+                }`}
             >
               <X className="h-6 w-6" />
             </button>
             {title && (
-              <h1 className={`text-title-large font-medium ${
-                isDark ? 'text-dark-text' : 'text-gray-900'
-              }`}>
+              <h1 className={`text-title-large font-medium ${isDark ? 'text-dark-text' : 'text-gray-900'
+                }`}>
                 {title}
               </h1>
             )}
             <div className="w-10" /> {/* Spacer */}
           </div>
-          
+
           {/* Content */}
           <div className="p-6 overflow-y-auto">
             {children}
           </div>
-          
+
           {/* Actions */}
           {actions && (
-            <div className={`p-6 border-t ${
-              isDark ? 'border-gray-600' : 'border-gray-200'
-            }`}>
+            <div className={`p-6 border-t ${isDark ? 'border-gray-600' : 'border-gray-200'
+              }`}>
               {actions}
             </div>
           )}
@@ -129,7 +124,7 @@ export default function Modal({
       >
         {/* Scrim */}
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ease-material-standard" />
-        
+
         {/* Modal Container */}
         <div
           className={cn(
@@ -141,41 +136,37 @@ export default function Modal({
         >
           {/* Header */}
           {(title || showCloseButton) && (
-            <div className={`flex items-center justify-between p-6 ${
-              actions ? `border-b ${isDark ? 'border-gray-600' : 'border-gray-200'}` : ''
-            }`}>
+            <div className={`relative flex items-center justify-center p-6 ${actions ? `border-b ${isDark ? 'border-gray-600' : 'border-gray-200'}` : ''
+              }`}>
               {title && (
-                <h2 className={`text-headline-small font-normal ${
-                  isDark ? 'text-dark-text' : 'text-gray-900'
-                }`}>
+                <h2 className={`text-headline-small font-normal text-center ${isDark ? 'text-dark-text' : 'text-gray-900'
+                  }`}>
                   {title}
                 </h2>
               )}
               {showCloseButton && (
                 <button
                   onClick={onClose}
-                  className={`p-2 rounded-full transition-colors duration-200 ${
-                    isDark 
-                      ? 'text-dark-muted hover:text-dark-text hover:bg-gray-700' 
+                  className={`absolute right-6 top-6 p-2 rounded-full transition-colors duration-200 ${isDark
+                      ? 'text-dark-muted hover:text-dark-text hover:bg-gray-700'
                       : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-                  }`}
+                    }`}
                 >
                   <X className="h-5 w-5" />
                 </button>
               )}
             </div>
           )}
-          
+
           {/* Content */}
           <div className="p-6">
             {children}
           </div>
-          
+
           {/* Actions */}
           {actions && (
-            <div className={`flex items-center justify-end gap-3 p-6 border-t ${
-              isDark ? 'border-gray-600' : 'border-gray-200'
-            }`}>
+            <div className={`flex items-center justify-end gap-3 p-6 border-t ${isDark ? 'border-gray-600' : 'border-gray-200'
+              }`}>
               {actions}
             </div>
           )}
@@ -187,12 +178,12 @@ export default function Modal({
 
 // Material Design 3 Modal Variants
 export const MaterialModal = {
-  Dialog: (props: Omit<ModalProps, 'variant'>) => 
+  Dialog: (props: Omit<ModalProps, 'variant'>) =>
     <Modal variant="standard" {...props} />,
-  
-  FullScreen: (props: Omit<ModalProps, 'variant'>) => 
+
+  FullScreen: (props: Omit<ModalProps, 'variant'>) =>
     <Modal variant="full-screen-dialog" {...props} />,
-  
-  Alert: (props: Omit<ModalProps, 'size' | 'closeOnOverlayClick'>) => 
+
+  Alert: (props: Omit<ModalProps, 'size' | 'closeOnOverlayClick'>) =>
     <Modal size="small" closeOnOverlayClick={false} {...props} />,
 };

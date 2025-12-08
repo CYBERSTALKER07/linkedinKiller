@@ -84,6 +84,8 @@ const AdminApplicationsPage = lazy(() => import('./pages/AdminApplicationsPage')
 const AnswersPage = lazy(() => import('./pages/AnswersPage'));
 const CareerGoalsPage = lazy(() => import('./pages/CareerGoalsPage'));
 const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
+const JobApplicantsPage = lazy(() => import('./pages/JobApplicantsPage').then(module => ({ default: module.JobApplicantsPage })));
+const StudentCVPage = lazy(() => import('./pages/StudentCVPage').then(module => ({ default: module.StudentCVPage })));
 
 // LinkedIn Integration
 const LinkedInJobImport = lazy(() => import('./components/LinkedIn/LinkedInJobImport'));
@@ -483,6 +485,20 @@ function AppContent() {
               <ProtectedRoute>
                 <Suspense fallback={<LoadingFallback message="Loading job management..." />}>
                   <EmployerJobsManagement />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/job/:jobId/applicants" element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingFallback message="Loading applicants..." />}>
+                  <JobApplicantsPage />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/student/cv" element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingFallback message="Loading CV..." />}>
+                  <StudentCVPage />
                 </Suspense>
               </ProtectedRoute>
             } />

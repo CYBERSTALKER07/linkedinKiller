@@ -34,6 +34,7 @@ import Stepper, { Step } from './ui/Stepper';
 import { cn } from '../lib/cva';
 import { buttonVariants } from '../lib/animations';
 import { triggerSuccessConfetti } from '../lib/confetti';
+import LocationSelector from './LocationSelector';
 
 // --- Custom Hook to Replace Broken Import ---
 const useBreakpoint = (breakpoint: 'sm' | 'md' | 'lg' | 'xl' | '2xl') => {
@@ -90,7 +91,10 @@ export default function PostJob() {
     contact_email: user?.email || '',
     is_remote: false,
     experience_level: 'entry',
-    department: ''
+    department: '',
+    country: '',
+    city: '',
+    street_address: ''
   });
 
   const [newSkill, setNewSkill] = useState('');
@@ -185,7 +189,9 @@ export default function PostJob() {
 
     if (!formData.title.trim()) errors.title = 'Job title is required';
     if (!formData.company.trim()) errors.company = 'Company name is required';
-    if (!formData.location.trim()) errors.location = 'Location is required';
+    if (!formData.country.trim()) errors.location = 'Country is required';
+    if (!formData.city.trim()) errors.location = 'City is required';
+    if (!formData.street_address.trim()) errors.location = 'Street address is required';
     if (!formData.description.trim()) errors.description = 'Job description is required';
     if (!formData.requirements.trim()) errors.requirements = 'Requirements are required';
     if (!formData.contact_email.trim()) errors.contact_email = 'Contact email is required';
@@ -500,26 +506,31 @@ export default function PostJob() {
                           )}
                         </div>
                         <div className="space-y-2">
-                          <label className={cn("font-semibold flex items-center space-x-2", isDark ? 'text-white' : 'text-black')}>
-                            <MapPin className="h-4 w-4" />
-                            <span>Location *</span>
-                          </label>
-                          <input
-                            type="text"
-                            name="location"
-                            value={formData.location}
-                            onChange={handleInputChange}
-                            placeholder="City, State or Remote"
-                            className={cn(
-                              "w-full border rounded-3xl px-4 py-2.5 outline-none focus:border-2 transition-all",
-                              isDark
-                                ? 'bg-zinc-900/50 border-gray-200/10 text-white focus:border-lime-400'
-                                : 'bg-white border-gray-200 text-gray-900 focus:border-lime-500 shadow-sm'
-                            )}
+                          {/* Location Selector */}
+                          <LocationSelector
+                            value={{
+                              country: formData.country,
+                              city: formData.city,
+                              street_address: formData.street_address
+                            }}
+                            onChange={(loc) => {
+                              setFormData(prev => ({
+                                ...prev,
+                                country: loc.country,
+                                city: loc.city,
+                                street_address: loc.street_address,
+                                location: `${loc.street_address}, ${loc.city}, ${loc.country}`
+                              }));
+                              if (validationErrors.location) {
+                                setValidationErrors(prev => {
+                                  const newErrors = { ...prev };
+                                  delete newErrors.location;
+                                  return newErrors;
+                                });
+                              }
+                            }}
+                            error={validationErrors.location}
                           />
-                          {validationErrors.location && (
-                            <p className="text-red-500 text-sm">{validationErrors.location}</p>
-                          )}
                         </div>
                       </div>
 

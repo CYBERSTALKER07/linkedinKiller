@@ -33,6 +33,8 @@ export default function Applications() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
 
+
+
   useEffect(() => {
     fetchApplications();
   }, [user?.id]);
@@ -87,6 +89,25 @@ export default function Applications() {
     }
   };
 
+  const handleDeleteApplication = async (applicationId: string) => {
+    if (!confirm('Are you sure you want to withdraw this application?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('applications')
+        .delete()
+        .eq('id', applicationId)
+        .eq('student_id', user?.id);
+
+      if (error) throw error;
+
+      setApplications(prev => prev.filter(app => app.id !== applicationId));
+    } catch (err) {
+      console.error('Error deleting application:', err);
+      alert('Failed to withdraw application');
+    }
+  };
+
   const filteredApplications = applications.filter(app => {
     const matchesSearch = app.job_title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       app.company_name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -117,14 +138,7 @@ export default function Applications() {
     }
   };
 
-  const statusCounts = {
-    all: applications.length,
-    pending: applications.filter(a => a.status === 'pending').length,
-    reviewed: applications.filter(a => a.status === 'reviewed').length,
-    interview: applications.filter(a => a.status === 'interview').length,
-    accepted: applications.filter(a => a.status === 'accepted').length,
-    rejected: applications.filter(a => a.status === 'rejected').length
-  };
+
 
   if (loading) {
     return (
@@ -279,23 +293,17 @@ export default function Applications() {
               <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="small"
                   onClick={() => window.open(`/job/${application.job_id}`, '_blank')}
                 >
                   <ExternalLink className="h-4 w-4" />
                 </Button>
 
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedApplication(application)}
-                >
-                  <Eye className="h-4 w-4" />
-                </Button>
+
 
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="small"
                   onClick={() => handleDeleteApplication(application.id)}
                   className="text-red-500 hover:text-red-700"
                 >

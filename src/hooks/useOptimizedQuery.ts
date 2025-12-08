@@ -1,10 +1,12 @@
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
+import { Post } from '../types';
 
 // Optimized column selection - only fetch what's needed
 const PROFILE_COLUMNS = 'id,full_name,avatar_url,username,bio,verified,role,company_name,location,website,created_at,cover_image_url,title';
 const POST_COLUMNS = 'id,content,user_id,created_at,likes_count,comments_count,shares_count,media_type,image_url,video_url';
 
+// Hook for fetching posts with optimized caching and infinite scroll
 // Hook for fetching posts with optimized caching and infinite scroll
 export function usePosts(limit = 20, currentUserId?: string) {
   return useInfiniteQuery({
@@ -14,10 +16,10 @@ export function usePosts(limit = 20, currentUserId?: string) {
         const from = pageParam * limit;
         const to = from + limit - 1;
 
-        // STEP 1: Fetch posts WITH retweet data
+        // STEP 1: Fetch posts (including retweets)
         const { data: postsData, error: postsError } = await supabase
           .from('posts')
-          .select('id,content,user_id,created_at,likes_count,comments_count,shares_count,retweets_count,media_type,image_url,video_url,visibility')
+          .select('id,content,user_id,created_at,likes_count,comments_count,shares_count,retweets_count,media_type,image_url,video_url,visibility,is_retweet,original_post_id,quote_content,is_quote_retweet')
           .order('created_at', { ascending: false })
           .range(from, to);
 
@@ -30,21 +32,37 @@ export function usePosts(limit = 20, currentUserId?: string) {
           return [];
         }
 
-        // STEP 2: Fetch retweets data separately
-        const { data: retweetsData, error: retweetsError } = await supabase
-          .from('post_retweets')
-          .select('id,post_id,user_id,is_quote_retweet,quote_content,created_at')
-          .order('created_at', { ascending: false })
-          .range(from, to);
+        // STEP 2: Collect original post IDs for retweets
+        const originalPostIds = postsData
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .filter((p: any) => p.is_retweet && p.original_post_id)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .map((p: any) => p.original_post_id);
 
-        if (retweetsError) {
-          console.warn('Error fetching retweets:', retweetsError);
+        // STEP 3: Fetch original posts if needed
+        let originalPostsMap = new Map();
+        let originalPostUserIds: string[] = [];
+
+        if (originalPostIds.length > 0) {
+          const { data: originalPosts, error: originalPostsError } = await supabase
+            .from('posts')
+            .select('id,content,user_id,created_at,likes_count,comments_count,shares_count,retweets_count,media_type,image_url,video_url,visibility')
+            .in('id', originalPostIds);
+
+          if (originalPostsError) {
+            console.error('Error fetching original posts:', originalPostsError);
+          }
+
+          if (originalPosts) {
+            originalPostsMap = new Map(originalPosts.map(p => [p.id, p]));
+            originalPostUserIds = originalPosts.map(p => p.user_id);
+          }
         }
 
-        // STEP 3: Get all unique user IDs (post authors + retweeters)
-        const postUserIds = postsData.map(post => post.user_id);
-        const retweetUserIds = retweetsData?.map(rt => rt.user_id) || [];
-        const userIds = [...new Set([...postUserIds, ...retweetUserIds])];
+        // STEP 4: Get all unique user IDs (post authors + original post authors)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const postUserIds = postsData.map((post: any) => post.user_id);
+        const userIds = [...new Set([...postUserIds, ...originalPostUserIds])];
 
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
@@ -59,17 +77,22 @@ export function usePosts(limit = 20, currentUserId?: string) {
           profilesData?.map(p => [p.id, p]) || []
         );
 
-        // STEP 4: Fetch likes separately if we have a current user
+        // STEP 5: Fetch likes separately if we have a current user
         let likesMap = new Map<string, boolean>();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let userRetweetsMap = new Map<string, any>();
 
         if (currentUserId) {
           try {
+            // Fetch likes for both current posts and original posts (for retweets)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const allPostIds = [...postsData.map((p: any) => p.id), ...originalPostIds];
+
             const { data: likesData } = await supabase
               .from('likes')
               .select('post_id,user_id')
               .eq('user_id', currentUserId)
-              .in('post_id', postsData.map(p => p.id));
+              .in('post_id', allPostIds);
 
             if (likesData) {
               likesMap = new Map(likesData.map(like => [like.post_id, true]));
@@ -77,68 +100,39 @@ export function usePosts(limit = 20, currentUserId?: string) {
 
             // Check which posts current user has retweeted
             const { data: userRetweets } = await supabase
-              .from('post_retweets')
-              .select('post_id,is_quote_retweet')
+              .from('posts')
+              .select('original_post_id,is_quote_retweet')
               .eq('user_id', currentUserId)
-              .in('post_id', postsData.map(p => p.id));
+              .eq('is_retweet', true)
+              .in('original_post_id', allPostIds);
 
             if (userRetweets) {
-              userRetweetsMap = new Map(userRetweets.map(rt => [rt.post_id, rt]));
+              userRetweetsMap = new Map(userRetweets.map(rt => [rt.original_post_id, rt]));
             }
           } catch (error) {
             console.warn('Error fetching user interactions:', error);
           }
         }
 
-        // STEP 5: Create a map of original posts for retweets
-        const postsMap = new Map(postsData.map(p => [p.id, p]));
+        // STEP 6: Build feed items
+        const feedItems: Post[] = [];
 
-        // STEP 6: Build combined feed (original posts + retweets)
-        const feedItems: any[] = [];
-
-        // Add original posts
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         postsData.forEach((post: any) => {
           const profile = profilesMap.get(post.user_id);
-          feedItems.push({
-            id: post.id,
-            content: post.content || '',
-            author: {
-              id: post.user_id,
-              name: profile?.full_name || 'User',
-              username: profile?.username || `user${post.user_id}`,
-              avatar_url: profile?.avatar_url,
-              verified: profile?.verified || false
-            },
-            created_at: post.created_at,
-            likes_count: post.likes_count || 0,
-            retweets_count: post.retweets_count || 0,
-            replies_count: post.comments_count || 0,
-            has_liked: likesMap.has(post.id),
-            has_retweeted: userRetweetsMap.has(post.id),
-            has_bookmarked: false,
-            media: post.image_url || post.video_url ? [{
-              type: (post.media_type === 'video' || post.video_url) ? 'video' : 'image',
-              url: post.image_url || post.video_url || '',
-              alt: 'Post media'
-            }] : undefined,
-            visibility: post.visibility,
-            is_retweet: false,
-            is_quote_retweet: false
-          });
-        });
 
-        // Add retweets to the feed
-        if (retweetsData && retweetsData.length > 0) {
-          retweetsData.forEach((retweet: any) => {
-            const originalPost = postsMap.get(retweet.post_id);
+          if (post.is_retweet) {
+            // Handle Retweet
+            const originalPost = originalPostsMap.get(post.original_post_id);
+            // If original post is missing (deleted?), maybe skip or show placeholder?
+            // For now, if original post is missing, we skip rendering this retweet
             if (!originalPost) return;
 
             const originalProfile = profilesMap.get(originalPost.user_id);
-            const retweeterProfile = profilesMap.get(retweet.user_id);
 
             feedItems.push({
-              id: `retweet_${retweet.id}`,
-              content: retweet.quote_content || originalPost.content,
+              id: post.id, // Use the RETWEET'S ID (UUID from posts table)
+              content: post.quote_content || originalPost.content,
               author: {
                 id: originalPost.user_id,
                 name: originalProfile?.full_name || 'User',
@@ -146,12 +140,14 @@ export function usePosts(limit = 20, currentUserId?: string) {
                 avatar_url: originalProfile?.avatar_url,
                 verified: originalProfile?.verified || false
               },
-              created_at: retweet.created_at,
-              likes_count: originalPost.likes_count || 0,
-              retweets_count: originalPost.retweets_count || 0,
-              replies_count: originalPost.comments_count || 0,
-              has_liked: likesMap.has(originalPost.id),
-              has_retweeted: userRetweetsMap.has(originalPost.id),
+              created_at: post.created_at, // Retweet time
+              likes_count: post.likes_count || 0, // Likes on the RETWEET itself? 
+              // Wait, user said "interactions (like/retweet) on a retweet apply to the retweet itself".
+              // So we use post.likes_count, NOT originalPost.likes_count.
+              retweets_count: post.retweets_count || 0,
+              replies_count: post.comments_count || 0,
+              has_liked: likesMap.has(post.id),
+              has_retweeted: userRetweetsMap.has(post.id), // Can you retweet a retweet? Yes.
               has_bookmarked: false,
               media: originalPost.image_url || originalPost.video_url ? [{
                 type: (originalPost.media_type === 'video' || originalPost.video_url) ? 'video' : 'image',
@@ -160,8 +156,8 @@ export function usePosts(limit = 20, currentUserId?: string) {
               }] : undefined,
               visibility: originalPost.visibility,
               is_retweet: true,
-              is_quote_retweet: retweet.is_quote_retweet || false,
-              quote_content: retweet.quote_content,
+              is_quote_retweet: post.is_quote_retweet || false,
+              quote_content: post.quote_content,
               original_post: {
                 id: originalPost.id,
                 content: originalPost.content || '',
@@ -177,19 +173,51 @@ export function usePosts(limit = 20, currentUserId?: string) {
                   type: (originalPost.media_type === 'video' || originalPost.video_url) ? 'video' : 'image',
                   url: originalPost.image_url || originalPost.video_url || '',
                   alt: 'Post media'
-                }] : undefined
+                }] : undefined,
+                // Also include original post stats if needed for display
+                likes_count: originalPost.likes_count,
+                replies_count: originalPost.comments_count,
+                retweets_count: originalPost.retweets_count
               },
               retweeted_by: {
-                id: retweet.user_id,
-                name: retweeterProfile?.full_name || 'User',
-                username: retweeterProfile?.username || `user${retweet.user_id}`,
-                avatar_url: retweeterProfile?.avatar_url
+                id: post.user_id,
+                name: profile?.full_name || 'User',
+                username: profile?.username || `user${post.user_id}`,
+                avatar_url: profile?.avatar_url
               }
             });
-          });
-        }
+          } else {
+            // Handle Regular Post
+            feedItems.push({
+              id: post.id,
+              content: post.content || '',
+              author: {
+                id: post.user_id,
+                name: profile?.full_name || 'User',
+                username: profile?.username || `user${post.user_id}`,
+                avatar_url: profile?.avatar_url,
+                verified: profile?.verified || false
+              },
+              created_at: post.created_at,
+              likes_count: post.likes_count || 0,
+              retweets_count: post.retweets_count || 0,
+              replies_count: post.comments_count || 0,
+              has_liked: likesMap.has(post.id),
+              has_retweeted: userRetweetsMap.has(post.id),
+              has_bookmarked: false,
+              media: post.image_url || post.video_url ? [{
+                type: (post.media_type === 'video' || post.video_url) ? 'video' : 'image',
+                url: post.image_url || post.video_url || '',
+                alt: 'Post media'
+              }] : undefined,
+              visibility: post.visibility,
+              is_retweet: false,
+              is_quote_retweet: false
+            });
+          }
+        });
 
-        // STEP 7: Sort combined feed by date
+        // Sort combined feed by date
         feedItems.sort((a, b) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
@@ -338,7 +366,7 @@ export function useMatchedJobs(userId?: string, limit = 5) {
           // Normalize job data
           const jobTitle = job.title?.toLowerCase() || '';
           const jobDescription = job.description?.toLowerCase() || '';
-          const jobCompany = job.company?.toLowerCase() || '';
+          // const jobCompany = job.company?.toLowerCase() || ''; // Unused
           const jobSkills = (Array.isArray(job.skills) ? job.skills : []).map(s => s.toLowerCase());
           const jobLocation = job.location?.toLowerCase() || '';
           const jobRequirements = Array.isArray(job.requirements) ? job.requirements.join(' ').toLowerCase() : '';
@@ -478,7 +506,9 @@ export function useCreatePost() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mutationFn: async (newPost: any) => {
+      // Only select necessary columns
       const { data, error } = await supabase
         .from('posts')
         .insert([newPost])
@@ -553,6 +583,7 @@ export function useMostLikedPosts(limit = 5, currentUserId?: string) {
         }
 
         // STEP 4: Transform and return posts with minimal processing
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return postsData.map((post: any) => {
           const profile = profilesMap.get(post.user_id);
           return {
@@ -656,6 +687,7 @@ export function useNotifications(userId: string | undefined) {
     queryFn: async () => {
       if (!userId) throw new Error('User ID required');
 
+      // Only select necessary columns
       const { data, error } = await supabase
         .from('notifications')
         .select('id,user_id,type,title,message,is_read,created_at,actor_id,post_id,comment_id')
@@ -689,6 +721,7 @@ export function useConversations(userId: string | undefined) {
     queryFn: async () => {
       if (!userId) throw new Error('User ID required');
 
+      // Only select necessary columns
       const { data, error } = await supabase
         .from('conversations')
         .select(`
@@ -724,6 +757,7 @@ export function useBookmarks(userId: string | undefined) {
     queryFn: async () => {
       if (!userId) throw new Error('User ID required');
 
+      // Only select necessary columns
       const { data, error } = await supabase
         .from('bookmarks')
         .select(`
@@ -844,6 +878,7 @@ export function useCompanyJobs(companyId: string | undefined) {
     queryFn: async () => {
       if (!companyId) throw new Error('Company ID required');
 
+      // Only select necessary columns
       const { data, error } = await supabase
         .from('jobs')
         .select('id,title,description,location,type,salary_range,status,posted_at')
@@ -861,15 +896,20 @@ export function useCompanyJobs(companyId: string | undefined) {
 }
 
 // Hook for search with debouncing handled at component level - OPTIMIZED
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function useSearch(query: string, filters?: any) {
   return useQuery({
     queryKey: ['search', query, filters],
     queryFn: async () => {
       if (!query || query.length < 2) return { jobs: [], users: [], posts: [], companies: [], hashtags: [] };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let jobs: any[] = [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let users: any[] = [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let posts: any[] = [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let companies: any[] = [];
 
       // Search jobs with error handling
@@ -954,6 +994,7 @@ export function useSearch(query: string, filters?: any) {
       }
 
       // Search hashtags with error handling
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let hashtags: any[] = [];
       try {
         const { data: hashtagsData, error: hashtagsError } = await supabase
@@ -1114,7 +1155,7 @@ export function useRecommendedUsers(currentUserId?: string, limit = 6) {
 
       // 5. Fetch follow status for these users
       const userIds = recommendedUsers?.map(u => u.id) || [];
-      let followingMap = new Set<string>();
+      const followingMap = new Set<string>();
 
       if (userIds.length > 0) {
         const { data: follows } = await supabase
@@ -1173,6 +1214,7 @@ export function useRecommendedUsers(currentUserId?: string, limit = 6) {
         })
         .sort((a, b) => b._score - a._score) // Sort by relevance score
         .slice(0, limit) // Take only the top results
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         .map(({ _score, ...user }) => user); // Remove score from result
 
       return scoredUsers;
@@ -1224,6 +1266,7 @@ export function useFollowUser() {
 
   return useMutation({
     mutationFn: async ({ followerId, followingId }: { followerId: string; followingId: string }) => {
+      // Only select necessary columns
       const { data, error } = await supabase
         .from('follows')
         .insert([{ follower_id: followerId, following_id: followingId }])
@@ -1233,7 +1276,7 @@ export function useFollowUser() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_data, variables) => {
       // Invalidate specific follow status for this user pair
       queryClient.invalidateQueries({
         queryKey: ['followStatus', variables.followerId, variables.followingId]
@@ -1264,7 +1307,7 @@ export function useUnfollowUser() {
 
       if (error) throw error;
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_data, variables) => {
       // Invalidate specific follow status for this user pair
       queryClient.invalidateQueries({
         queryKey: ['followStatus', variables.followerId, variables.followingId]
@@ -1440,6 +1483,7 @@ export function useEmployerEvents(limit = 12, status = 'upcoming') {
         );
 
         // Combine events with employer data
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return events.map((event: any) => ({
           id: event.id,
           title: event.title,
@@ -1465,6 +1509,7 @@ export function useEmployerEvents(limit = 12, status = 'upcoming') {
             verified: employerMap.get(event.employer_id)!.verified
           } : null
         }));
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         console.error('Error fetching employer events:', error);
         // Return empty array on error instead of throwing
@@ -1565,6 +1610,7 @@ export function useEmployerEvent(eventId: string | undefined) {
             bio: employerData.bio
           } : null
         };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         console.error('Error in useEmployerEvent:', error);
         throw error;
@@ -1581,6 +1627,7 @@ export function useCreateEmployerEvent() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mutationFn: async (newEvent: any) => {
       const { data, error } = await supabase
         .from('employer_events')
@@ -1602,6 +1649,7 @@ export function useUpdateEmployerEvent() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mutationFn: async ({ eventId, updates }: { eventId: string; updates: any }) => {
       const { data, error } = await supabase
         .from('employer_events')
@@ -1723,6 +1771,7 @@ export function useEventRegistrationStatus(eventId: string | undefined, userId: 
     queryFn: async () => {
       if (!eventId || !userId) throw new Error('Event ID and User ID required');
 
+      // Only select necessary columns
       const { data, error } = await supabase
         .from('event_attendees')
         .select('id, status')
@@ -1770,16 +1819,18 @@ export function useLikePost() {
         }
 
         return data;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         console.error('Failed to like post:', error);
         throw error;
       }
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       console.log('✅ Post liked successfully');
       // Refetch posts to get updated like counts
       queryClient.invalidateQueries({ queryKey: ['posts'] });
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
       console.error('Like mutation error:', error?.message || error);
     }
@@ -1807,6 +1858,7 @@ export function useUnlikePost() {
           });
           throw error;
         }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         console.error('Failed to unlike post:', error);
         throw error;
@@ -1817,6 +1869,7 @@ export function useUnlikePost() {
       // Refetch posts to get updated like counts
       queryClient.invalidateQueries({ queryKey: ['posts'] });
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
       console.error('Unlike mutation error:', error?.message || error);
     }
@@ -1849,6 +1902,10 @@ export function usePostDetail(postId: string | undefined, currentUserId?: string
             visibility,
             location,
             tags,
+            is_retweet,
+            original_post_id,
+            quote_content,
+            is_quote_retweet,
             likes:likes!post_id (
               user_id
             )
@@ -1869,17 +1926,56 @@ export function usePostDetail(postId: string | undefined, currentUserId?: string
           console.warn('Error fetching author profile:', authorError);
         }
 
+        // If it's a retweet, fetch original post and its author
+        let originalPost = null;
+        let originalAuthor = null;
+
+        if (postData.is_retweet && postData.original_post_id) {
+          const { data: opData } = await supabase
+            .from('posts')
+            .select(`
+              id,
+              content,
+              user_id,
+              created_at,
+              media_type,
+              image_url,
+              video_url,
+              visibility
+            `)
+            .eq('id', postData.original_post_id)
+            .single();
+
+          if (opData) {
+            originalPost = opData;
+
+            const { data: opAuthor } = await supabase
+              .from('profiles')
+              .select(PROFILE_COLUMNS)
+              .eq('id', opData.user_id)
+              .single();
+
+            if (opAuthor) {
+              originalAuthor = opAuthor;
+            }
+          }
+        }
+
         // Calculate if current user has liked this post
         const hasLiked = currentUserId && postData.likes
           ? (postData.likes as Array<{ user_id: string }>).some(like => like.user_id === currentUserId)
           : false;
 
+        // Construct response
+        // If it's a retweet, we might want to return mixed data
+        // For now, return the post data as is, but include original_post info
+
         return {
           id: postData.id,
           user_id: postData.user_id,
-          content: postData.content || '',
-          image_url: postData.image_url,
-          video_url: postData.video_url,
+          content: postData.is_retweet ? (postData.quote_content || originalPost?.content || '') : (postData.content || ''),
+          image_url: postData.is_retweet ? (originalPost?.image_url) : postData.image_url,
+          video_url: postData.is_retweet ? (originalPost?.video_url) : postData.video_url,
           post_type: postData.media_type || 'text',
           visibility: postData.visibility || 'public',
           likes_count: postData.likes_count || 0,
@@ -1891,6 +1987,18 @@ export function usePostDetail(postId: string | undefined, currentUserId?: string
           location: postData.location,
           has_liked: hasLiked,
           has_bookmarked: false,
+          is_retweet: postData.is_retweet,
+          original_post: originalPost ? {
+            id: originalPost.id,
+            content: originalPost.content,
+            author: originalAuthor ? {
+              id: originalAuthor.id,
+              full_name: originalAuthor.full_name,
+              avatar_url: originalAuthor.avatar_url,
+              username: originalAuthor.username,
+              verified: originalAuthor.verified
+            } : undefined
+          } : undefined,
           author: {
             id: postData.user_id,
             full_name: authorData?.full_name || 'User',
@@ -1903,6 +2011,7 @@ export function usePostDetail(postId: string | undefined, currentUserId?: string
             location: authorData?.location
           }
         };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         console.error('Error fetching post detail:', error);
         throw error;
@@ -1994,6 +2103,7 @@ export function useJobDetail(jobId: string | undefined) {
             bio: employerData.bio
           } : null
         };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         console.error('Error in useJobDetail:', error);
         throw error;
@@ -2038,6 +2148,7 @@ export function useBookmarkPost() {
           if (error) throw error;
           return { bookmarked: true };
         }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         console.error('Failed to toggle bookmark:', error);
         throw error;
@@ -2107,6 +2218,7 @@ export function useTrendingNews(limit = 10) {
         );
 
         // Format as news items
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return sortedPosts.map((post: any) => {
           const profile = profilesMap.get(post.user_id);
           const timeAgo = getTimeAgo(post.created_at);
@@ -2164,6 +2276,7 @@ export function useTrendingTopics(limit = 10) {
         // Extract hashtags and count occurrences
         const topicCounts = new Map<string, { count: number; category: string; totalEngagement: number }>();
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         postsData.forEach((post: any) => {
           const engagement = (post.likes_count || 0) + (post.comments_count || 0) + (post.shares_count || 0);
 
@@ -2258,6 +2371,7 @@ export function useUpdateApplicationStatus() {
 
   return useMutation({
     mutationFn: async ({ applicationId, status }: { applicationId: string; status: string }) => {
+      // Only select necessary columns
       const { data, error } = await supabase
         .from('applications')
         .update({ status })

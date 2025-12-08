@@ -6,6 +6,7 @@ import {
   DollarSign
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import { cn } from '../lib/cva';
 
 export interface JobCardProps {
@@ -26,6 +27,7 @@ export interface JobCardProps {
     company_name?: string;
     verified?: boolean;
   };
+  onApply?: () => void;
 }
 
 export default function JobCard({
@@ -36,8 +38,10 @@ export default function JobCard({
   type,
   salary_range,
   posted_at,
-  employer
+  employer,
+  onApply
 }: JobCardProps) {
+  const { user } = useAuth();
   const { isDark } = useTheme();
 
   // Format Date: "28 Mar 2023"
@@ -61,10 +65,10 @@ export default function JobCard({
   };
 
   return (
-    <Link to={`/job/${id}`} className="block h-full group">
+    <div className="block h-full group cursor-pointer" onClick={() => onApply?.()}>
       <div
         className={cn(
-          'h-full flex flex-col p-7 rounded-[2rem] border transition-all duration-300 relative hover:shadow-2xl hover:-translate-y-1',
+          'h-[360px] w-[380px] flex flex-col p-7 rounded-[2rem] border transition-all duration-300 relative',
           isDark
             ? 'bg-[#121212] border-gray-800 text-white shadow-black/50'
             : 'bg-white border-gray-100 text-gray-900 shadow-gray-200/50'
@@ -92,19 +96,19 @@ export default function JobCard({
             </div>
 
             {/* Verified Badge (Solid Green with White Check) */}
-            {employer?.verified && (
-              <div className="absolute -bottom-0.5 -right-0.5 bg-white rounded-full p-[3px]">
-                <div className="w-5 h-5 bg-green-600 rounded-full flex items-center justify-center">
-                  <Check className="w-3.5 h-3.5 text-white stroke-[3]" />
-                </div>
+            {/* {employer?.verified && ( */}
+            <div className="absolute -bottom-0.5 -right-0.5 bg-green-600 rounded-full p-[3px]">
+              <div className="w-5 h-5 bg-green-600 rounded-full flex items-center justify-center">
+                <Check className="w-3.5 h-3.5 text-white stroke-[3]" />
               </div>
-            )}
+            </div>
+            {/* )} */}
           </div>
 
           {/* Texts */}
-          <div className="flex flex-col">
+          <div className="flex flex-col gap-1">
             <span className={cn(
-              "text-base font-medium mb-0.5",
+              "text-base font-medium  mb-0.5",
               isDark ? "text-gray-400" : "text-gray-500"
             )}>
               {company}
@@ -119,17 +123,17 @@ export default function JobCard({
         </div>
 
         {/* --- Info Badges Row --- */}
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 mb-8">
+        <div className="flex items-center gap-x-2 gap-y-3 mb-8">
 
           {/* Location Badge (Gray) */}
           <div className="flex items-center gap-3">
             <div className={cn(
-              "w-10 h-10 rounded-full flex items-center justify-center",
+              "w-8 h-8 rounded-full flex items-center justify-center",
               isDark ? "bg-gray-800 text-gray-400" : "bg-gray-100 text-gray-400"
             )}>
               <MapPin className="w-5 h-5 fill-current" />
             </div>
-            <span className={cn("font-medium", isDark ? "text-gray-300" : "text-gray-900")}>
+            <span className={cn("font-thin text-xs", isDark ? "text-gray-300" : "text-gray-900")}>
               {location ? location.split(',')[0] : 'Remote'}
             </span>
           </div>
@@ -137,12 +141,12 @@ export default function JobCard({
           {/* Job Type Badge (Purple w/ Dollar Sign) */}
           <div className="flex items-center gap-3">
             <div className={cn(
-              "w-10 h-10 rounded-full flex items-center justify-center",
+              "w-8 h-8 rounded-full flex items-center justify-center",
               isDark ? "bg-[#3B3058] text-[#8B5CF6]" : "bg-[#F3F0FF] text-[#7C3AED]"
             )}>
               <DollarSign className="w-5 h-5 stroke-[2.5]" />
             </div>
-            <span className={cn("font-medium capitalize", isDark ? "text-gray-300" : "text-gray-900")}>
+            <span className={cn("font-thin text-xs", isDark ? "text-gray-300" : "text-gray-900")}>
               {type ? type.replace('-', ' ') : 'Full Time'}
             </span>
           </div>
@@ -150,12 +154,12 @@ export default function JobCard({
           {/* Time/Exp Badge (Red) */}
           <div className="flex items-center gap-3">
             <div className={cn(
-              "w-10 h-10 rounded-full flex items-center justify-center",
+              "w-8 h-8 rounded-full flex items-center justify-center",
               isDark ? "bg-[#4C2D32] text-[#F43F5E]" : "bg-[#FFF1F2] text-[#F43F5E]"
             )}>
               <Clock className="w-5 h-5 stroke-[2.5]" />
             </div>
-            <span className={cn("font-medium", isDark ? "text-gray-300" : "text-gray-900")}>
+            <span className={cn("font-thin text-xs", isDark ? "text-gray-300" : "text-gray-900")}>
               {timeAgo(posted_at).replace(' ago', '')} exp.
             </span>
           </div>
@@ -163,13 +167,13 @@ export default function JobCard({
         </div>
 
         {/* --- Spacer --- */}
-        <div className="flex-grow" />
+        {/* <div className="flex-grow" /> */}
 
         {/* --- Salary & Date --- */}
         <div className="flex items-end justify-between mb-8">
           <div className="flex items-baseline">
             <span className={cn(
-              "text-3xl font-black tracking-tight",
+              "text-3xl font-bold tracking-tight",
               isDark ? "text-white" : "text-gray-900"
             )}>
               {salary_range ? salary_range.split('-')[0] : 'Competitive'}
@@ -182,7 +186,7 @@ export default function JobCard({
             </span>
           </div>
           <span className={cn(
-            "font-medium text-sm mb-1.5",
+            "font-thin text-xs mb-1.5",
             isDark ? "text-gray-500" : "text-gray-400"
           )}>
             {formatDate(posted_at)}
@@ -190,7 +194,7 @@ export default function JobCard({
         </div>
 
         {/* --- Footer Buttons --- */}
-        <div className="grid grid-cols-2 gap-4 mt-auto">
+        <div className="grid grid-cols-2 gap-4 ">
           <button
             className={cn(
               "w-full py-3.5 rounded-xl font-bold text-sm transition-all border",
@@ -198,23 +202,41 @@ export default function JobCard({
                 ? "border-gray-700 text-white hover:bg-gray-800"
                 : "border-gray-200 text-gray-800 hover:bg-gray-50 bg-white"
             )}
-            onClick={(e) => e.preventDefault()}
+            onClick={(e) => {
+              e.preventDefault();
+              onApply?.();
+            }}
           >
             View Details
           </button>
 
-          <button
-            className={cn(
-              "w-full py-3.5 rounded-xl font-bold text-sm transition-all hover:scale-[1.02] hover:shadow-lg",
-              "bg-[#0EA5E9] text-white border border-transparent"
-            )}
-            onClick={(e) => e.preventDefault()}
-          >
-            Apply now
-          </button>
+          {user?.id === employer?.id ? (
+            <Link
+              to={`/job/${id}/applicants`}
+              className={cn(
+                "w-full py-3.5 rounded-xl font-bold text-sm transition-all hover:scale-[1.02] hover:shadow-lg flex items-center justify-center",
+                "bg-purple-600 text-white border border-transparent hover:bg-purple-700"
+              )}
+              onClick={(e) => e.stopPropagation()}
+            >
+              View Applicants
+            </Link>
+          ) : (
+            <button
+              className={cn(
+                "w-full py-3.5 rounded-xl font-bold text-sm transition-all hover:scale-[1.02] hover:shadow-lg",
+                "bg-[#0EA5E9] text-white border border-transparent"
+              )}
+              onClick={(e) => {
+                e.preventDefault();
+                onApply?.();
+              }}
+            >
+              Apply now
+            </button>
+          )}
         </div>
-
       </div>
-    </Link>
+    </div>
   );
 }

@@ -88,7 +88,7 @@ export default function UniversityDashboard() {
                                 )
                             `)
                             .eq('student_id', student.id)
-                            .order('applied_at', { ascending: false })
+                            .order('applied_date', { ascending: false })
                             .limit(1);
 
                         const latestApp = applications?.[0];

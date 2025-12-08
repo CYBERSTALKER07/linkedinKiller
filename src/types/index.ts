@@ -67,38 +67,45 @@ export interface AdminProfile {
 
 export interface Job {
   id: string;
+  employer_id: string;
   title: string;
   company: string;
   company_logo?: string;
   company_id?: number;
-  type: 'internship' | 'full-time' | 'part-time';
-  location: string;
-  salary?: string;
   description: string;
-  requirements: string[];
-  skills: string[];
-  posted_date: string;
-  deadline?: string;
-  applicants_count?: number;
-  employer_id: string;
-  status?: 'active' | 'inactive' | 'draft' | 'closed' | 'open';
-  views?: number;
+  location: string;
+  type: string;
+  salary_range?: string;
+  requirements: string[]; // text[] in DB
+  skills: string[]; // text[] in DB
   benefits?: string;
+  is_remote?: boolean;
   experience_level?: string;
-  created_at: string;
+  department?: string;
+  contact_email?: string;
+  status: string; // character varying
+  applications_count?: number;
+  views_count?: number;
+  posted_at: string; // timestamp with time zone
+  deadline?: string;
   updated_at: string;
+  created_at: string;
+  country?: string;
+  city?: string;
+  street_address?: string;
+
+  // Frontend-only or aliased properties (optional for compatibility)
+  salary?: string;
+  posted_date?: string;
+  employer?: {
+    id: string;
+    company_name?: string;
+    name?: string;
+    avatar_url?: string;
+    verified?: boolean;
+  };
 }
 
-export interface Application {
-  id: string;
-  job_id: string;
-  student_id: string;
-  status: 'pending' | 'reviewed' | 'accepted' | 'rejected';
-  applied_date: string;
-  cover_letter?: string;
-  created_at: string;
-  updated_at: string;
-}
 
 export interface Message {
   id: string;
@@ -405,4 +412,117 @@ export interface SupervisorEvaluation {
   recommendation: string;
   would_rehire: boolean;
   comments: string;
+}
+
+export interface Post {
+
+  id: string;
+  content: string;
+  author: {
+    id: string;
+    name: string;
+    username: string;
+    avatar_url?: string;
+    verified?: boolean;
+  };
+  created_at: string;
+  likes_count: number;
+  retweets_count: number;
+  replies_count: number;
+  has_liked: boolean;
+  has_retweeted: boolean;
+  has_bookmarked: boolean;
+  visibility: 'public' | 'connections' | 'private';
+  media?: { type: 'image' | 'video'; url: string; alt?: string }[];
+  reply_to?: { id: string; author: { name: string; username: string } };
+  is_retweet?: boolean;
+  is_quote_retweet?: boolean;
+  quote_content?: string;
+  original_post?: {
+    id: string;
+    content: string;
+    author: {
+      id: string;
+      name: string;
+      username: string;
+      avatar_url?: string;
+      verified?: boolean;
+    };
+    created_at: string;
+    replies_count?: number;
+    media?: { type: 'image' | 'video'; url: string; alt?: string }[];
+    likes_count?: number;
+    retweets_count?: number;
+  };
+  retweeted_by?: {
+    id: string;
+    name: string;
+    username: string;
+    avatar_url?: string;
+  };
+}
+
+export interface NewPost {
+  content: string;
+  media_type: 'text' | 'image' | 'video';
+  visibility: 'public' | 'connections' | 'private';
+  location?: string;
+  tags?: string[];
+  image_url?: string;
+  video_url?: string;
+}
+
+export interface StudentCV {
+  id: string;
+  user_id: string;
+  full_name: string;
+  email: string;
+  phone?: string;
+  city?: string;
+  university?: string;
+  major?: string;
+  graduation_year?: number;
+  skills?: string[];
+  experience?: CVExperience[];
+  education?: CVEducation[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CVExperience {
+  id: string;
+  company: string;
+  role: string;
+  start_date: string;
+  end_date?: string;
+  current: boolean;
+  description: string;
+}
+
+export interface CVEducation {
+  id: string;
+  institution: string;
+  degree: string;
+  field_of_study: string;
+  start_year: number;
+  end_year?: number;
+  current: boolean;
+}
+
+export interface Application {
+  id: string;
+  job_id: string;
+  student_id: string;
+  status: 'pending' | 'reviewed' | 'accepted' | 'rejected' | 'interview';
+  applied_date: string;
+  cover_letter?: string;
+  application_data?: Record<string, unknown>; // JSONB data
+  type?: 'standard_cv' | 'custom_form';
+  student?: {
+    full_name: string;
+    avatar_url?: string;
+    email: string;
+  };
+  created_at: string;
+  updated_at: string;
 }

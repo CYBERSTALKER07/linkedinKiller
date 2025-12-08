@@ -44,61 +44,7 @@ import { useInfiniteScroll, usePullToRefresh } from '../hooks/useScrollOptimizat
 import { useScrollDirection } from '../hooks/useScrollDirection';
 import { useRealtimePosts } from '../hooks/useRealtimePosts';
 import Animate from './ui/Animate';
-
-// --- Types ---
-interface Post {
-  [key: string]: any; // Index signature for compatibility with dynamic data
-  id: string;
-  content: string;
-  author: {
-    id: string;
-    name: string;
-    username: string;
-    avatar_url?: string;
-    verified?: boolean;
-  };
-  created_at: string;
-  likes_count: number;
-  retweets_count: number;
-  replies_count: number;
-  has_liked: boolean;
-  has_retweeted: boolean;
-  has_bookmarked: boolean;
-  media?: { type: 'image' | 'video'; url: string; alt?: string }[];
-  reply_to?: { id: string; author: { name: string; username: string } };
-  is_retweet?: boolean;
-  is_quote_retweet?: boolean;
-  quote_content?: string;
-  original_post?: {
-    id: string;
-    content: string;
-    author: {
-      id: string;
-      name: string;
-      username: string;
-      avatar_url?: string;
-      verified?: boolean;
-    };
-    created_at: string;
-    media?: { type: 'image' | 'video'; url: string; alt?: string }[];
-  };
-  retweeted_by?: {
-    id: string;
-    name: string;
-    username: string;
-    avatar_url?: string;
-  };
-}
-
-interface NewPost {
-  content: string;
-  media_type: 'text' | 'image' | 'video';
-  visibility: 'public' | 'connections' | 'private';
-  location?: string;
-  tags?: string[];
-  image_url?: string;
-  video_url?: string;
-}
+import { Post, NewPost } from '../types';
 
 interface ProfileStats {
   following: number;
@@ -214,6 +160,7 @@ export default function Feed() {
   const [realtimePosts, setRealtimePosts] = useState<Post[]>([]);
 
   useRealtimePosts({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onNewPost: useCallback(async (newPost: any) => {
       // Immediately add post with placeholder author for instant display
       const instantPost: Post = {
@@ -233,6 +180,7 @@ export default function Feed() {
         has_liked: false,
         has_retweeted: false,
         has_bookmarked: false,
+        visibility: newPost.visibility || 'public',
         media: newPost.image_url ? [{ type: 'image' as const, url: newPost.image_url }] :
           newPost.video_url ? [{ type: 'video' as const, url: newPost.video_url }] : undefined
       };
@@ -269,6 +217,7 @@ export default function Feed() {
       }
     }, []),
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onUpdatePost: useCallback((updatedPost: any) => {
       setRealtimePosts(prev =>
         prev.map(p => p.id === updatedPost.id ? { ...p, ...updatedPost } as Post : p)
@@ -293,7 +242,7 @@ export default function Feed() {
   // Sidebar Data Hooks
   const { data: profileData } = useProfile(user?.id);
   const { data: recommendedUsers = [], isLoading: recommendedUsersLoading } = useRecommendedUsers(user?.id, 6);
-  const { jobs = [], loading: jobsLoading } = useJobs();
+  const { jobs = [] } = useJobs();
   const { data: recommendedCompanies = [], isLoading: companiesLoading } = useRecommendedCompanies(3);
   const { data: matchedJobs = [], isLoading: matchedJobsLoading } = useMatchedJobs(user?.id);
   const { data: mostLikedPosts = [], isLoading: mostLikedPostsLoading } = useMostLikedPosts(3);
@@ -347,7 +296,7 @@ export default function Feed() {
     }));
 
     if (isUsernameSearch && cleanSearchQuery) {
-      users.sort((a, b) => {
+      users.sort((a: SearchResult, b: SearchResult) => {
         const aUsername = a.subtitle?.slice(1).toLowerCase() || '';
         const bUsername = b.subtitle?.slice(1).toLowerCase() || '';
         const query = cleanSearchQuery.toLowerCase();
@@ -471,11 +420,6 @@ export default function Feed() {
     return date.toLocaleDateString();
   };
 
-  const handleAtSymbolClick = () => {
-    setSidebarSearchInput('@');
-    searchInputRef.current?.focus();
-    setShowSearchDropdown(true);
-  };
 
   if (loading) {
     return (
@@ -625,13 +569,6 @@ export default function Feed() {
             ) : (
               <div>
                 {combinedPosts.map((post: Post, index: number) => {
-                  let effectivePostId = post.id;
-                  if (post.is_retweet && post.original_post?.id) {
-                    effectivePostId = post.original_post.id;
-                  } else if (post.id.startsWith('retweet_')) {
-                    effectivePostId = post.id.substring(8);
-                  }
-
                   return (
                     <Animate
                       key={post.id}
@@ -645,7 +582,8 @@ export default function Feed() {
                         isMobile={isMobile}
                         onClick={(e) => {
                           if ((e.target as HTMLElement).closest('button, a')) return;
-                          navigate(`/post/${effectivePostId}`);
+                          // Navigate to the post's own detail page (not original for retweets)
+                          navigate(`/post/${post.id}`);
                         }}
                       >
                         {post.is_retweet && post.retweeted_by && (
@@ -665,10 +603,10 @@ export default function Feed() {
                             <Avatar
                               src={post.author.avatar_url}
                               alt={post.author.name}
-                              size="md"
+                              size="lg"
                               className="hover:opacity-90 transition-opacity cursor-pointer relative z-10"
                             />
-                            {/* Threading line - extends from avatar down when there are replies */}
+                            {/* Threading line - shows when post has its own replies */}
                             {post.replies_count > 0 && (
                               <div
                                 className={cn(
@@ -685,7 +623,7 @@ export default function Feed() {
                               <div className="flex items-center gap-1 overflow-hidden">
                                 <Link
                                   to={`/profile/${post.author.id}`}
-                                  className="font-bold hover:underline truncate text-base"
+                                  className="font-bold hover:underline  truncate text-base"
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   {post.author.name}
@@ -804,16 +742,16 @@ export default function Feed() {
 
                             <div onClick={(e) => e.stopPropagation()}>
                               <EnhancedPostCardInteractions
-                                postId={effectivePostId}
+                                postId={post.id}
                                 initialLikes={post.likes_count}
                                 initialRetweets={post.retweets_count}
                                 initialReplies={post.replies_count}
                                 isLiked={post.has_liked}
                                 isRetweeted={post.has_retweeted}
-                                onLike={() => handleLike(effectivePostId)}
-                                onRetweet={() => handleRetweet(effectivePostId)}
-                                onComment={() => navigate(`/post/${effectivePostId}`)}
-                                onReply={() => navigate(`/post/${effectivePostId}/answers`)}
+                                onLike={() => handleLike(post.id)}
+                                onRetweet={() => handleRetweet(post.id)}
+                                onComment={() => navigate(`/post/${post.id}`)}
+                                onReply={() => navigate(`/post/${post.id}/answers`)}
                               />
                             </div>
                           </div>

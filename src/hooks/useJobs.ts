@@ -11,7 +11,7 @@ export function useJobs(jobId?: string) {
     queryFn: async () => {
       try {
         console.log('🔄 [useJobs] Starting to fetch jobs...');
-        
+
         const { data, error, status, statusText } = await supabase
           .from('jobs')
           .select(`
@@ -32,7 +32,7 @@ export function useJobs(jobId?: string) {
             experience_level,
             department,
             contact_email,
-            applications_count,
+
             views_count,
             deadline,
             updated_at
@@ -106,21 +106,21 @@ export function useJobs(jobId?: string) {
             skills: Array.isArray(job.skills) ? job.skills : [],
             requirements: Array.isArray(job.requirements) ? job.requirements : [],
             benefits: job.benefits || '',
-            is_remote: job.is_remote === true || job.is_remote === 'true',
+            is_remote: job.is_remote === true,
             experience_level: job.experience_level || '',
             department: job.department || '',
             contact_email: job.contact_email || '',
-            applications_count: job.applications_count || 0,
+            applications_count: 0,
             views_count: job.views_count || 0,
-            posted_at: job.posted_at || job.created_at,
-            created_at: job.posted_at || job.created_at,
+            posted_at: job.posted_at,
+            created_at: job.posted_at,
             deadline: job.deadline || null,
             updated_at: job.updated_at || job.posted_at,
             status: job.status || 'active',
             employer_id: job.employer_id,
             salary: job.salary_range, // Alias for compatibility
             posted_date: job.posted_at, // Alias for compatibility
-            company_logo: undefined, // Will be fetched separately if needed
+            company_logo: undefined, // Column does not exist
             employer: employer ? {
               id: employer.id,
               name: employer.full_name,
@@ -135,7 +135,7 @@ export function useJobs(jobId?: string) {
         return result;
       } catch (error) {
         console.error('❌ [useJobs] Fatal error:', error);
-        
+
         if (error instanceof Error) {
           console.error('Error details:', {
             name: error.name,
@@ -143,14 +143,14 @@ export function useJobs(jobId?: string) {
             stack: error.stack
           });
         }
-        
+
         return [];
       }
     },
-    staleTime: Infinity, // Never mark as stale - keep cache forever
-    gcTime: Infinity, // Never garbage collect - keep cache forever
-    refetchInterval: 30 * 1000, // Refetch every 30 seconds in the background
-    refetchIntervalInBackground: true, // Continue refetching even when tab is not focused
+    staleTime: 60 * 1000, // 1 minute - consider data fresh for 1 minute
+    gcTime: 5 * 60 * 1000, // 5 minutes - keep unused data in cache for 5 minutes
+    refetchInterval: false, // Disable auto-refetching to reduce load (optional, or keep if real-time needed)
+    refetchOnWindowFocus: true, // Refetch when user returns to tab
     retry: (failureCount, error: any) => {
       if (failureCount < 3) {
         if (error?.message?.includes('access control') || error?.message?.includes('permission')) {

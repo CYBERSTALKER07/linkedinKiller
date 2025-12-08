@@ -26,6 +26,7 @@ import { useCreateEmployerEvent } from '../hooks/useOptimizedQuery';
 import { supabase } from '../lib/supabase';
 import { bottomSheetVariants, modalVariants, backdropVariants } from '../lib/animations';
 import { triggerSubtleSuccess } from '../lib/confetti';
+import LocationSelector from './LocationSelector';
 
 interface PostEventFormProps {
   onClose?: () => void;
@@ -41,6 +42,9 @@ interface EventFormData {
   event_end_date?: string;
   event_end_time?: string;
   location: string;
+  country?: string;
+  city?: string;
+  street_address?: string;
   virtual_link?: string;
   event_type: 'recruiting' | 'webinar' | 'networking' | 'workshop' | 'conference';
   capacity?: number;
@@ -69,6 +73,9 @@ export default function PostEventForm({ onClose, onSuccess, fullPage = false }: 
     event_date: '',
     event_time: '09:00',
     location: '',
+    country: '',
+    city: '',
+    street_address: '',
     event_type: 'recruiting',
     capacity: undefined,
     tags: [],
@@ -341,7 +348,22 @@ export default function PostEventForm({ onClose, onSuccess, fullPage = false }: 
           {isVirtual ? (
             <input type="url" name="virtual_link" value={formData.virtual_link || ''} onChange={handleInputChange} placeholder="Meeting Link (Zoom/Meet)" className={cn("w-full px-4 py-3 rounded-xl text-sm outline-none border", isDark ? "bg-black border-zinc-700 text-white" : "bg-white border-gray-200")} />
           ) : (
-            <input type="text" name="location" value={formData.location} onChange={handleInputChange} placeholder="Physical Address" className={cn("w-full px-4 py-3 rounded-xl text-sm outline-none border", isDark ? "bg-black border-zinc-700 text-white" : "bg-white border-gray-200")} />
+            <LocationSelector
+              value={{
+                country: formData.country || '',
+                city: formData.city || '',
+                street_address: formData.street_address || ''
+              }}
+              onChange={(loc) => {
+                setFormData(prev => ({
+                  ...prev,
+                  country: loc.country,
+                  city: loc.city,
+                  street_address: loc.street_address,
+                  location: `${loc.street_address}, ${loc.city}, ${loc.country}`
+                }));
+              }}
+            />
           )}
         </div>
       </div>

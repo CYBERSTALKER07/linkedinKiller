@@ -9,17 +9,11 @@ import {
   AlertCircle,
   User,
   Mail,
-  Phone,
   MapPin,
-  Calendar,
   Briefcase,
-  GraduationCap,
-  Award,
   ExternalLink,
   Loader2,
-  ArrowLeft,
-  Save,
-  Eye
+  ArrowLeft
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -73,7 +67,7 @@ export default function JobApplication() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [applicationSubmitted, setApplicationSubmitted] = useState(false);
   const [error, setError] = useState<string>('');
-  
+
   // Application form state
   const [applicationData, setApplicationData] = useState<ApplicationData>({
     coverLetter: '',
@@ -90,7 +84,6 @@ export default function JobApplication() {
   });
 
   // UI state
-  const [activeStep, setActiveStep] = useState(1);
   const [isLinkedInAvailable, setIsLinkedInAvailable] = useState(false);
   const [useLinkedInData, setUseLinkedInData] = useState(false);
 
@@ -129,7 +122,7 @@ export default function JobApplication() {
     try {
       setIsLoading(true);
       const profile = await linkedInJobService.getUserProfile();
-      
+
       setApplicationData(prev => ({
         ...prev,
         personalInfo: {
@@ -144,7 +137,7 @@ export default function JobApplication() {
         skills: [...new Set([...prev.skills, ...(profile.skills || [])])],
         linkedinProfile: profile.publicProfileUrl
       }));
-      
+
       setUseLinkedInData(true);
     } catch (err) {
       console.error('Error importing LinkedIn data:', err);
@@ -231,7 +224,7 @@ export default function JobApplication() {
 
   const generateLinkedInApplyUrl = () => {
     if (!job) return '';
-    
+
     return linkedInJobService.createApplyWithLinkedInUrl({
       companyName: job.company,
       jobTitle: job.title,
@@ -302,22 +295,21 @@ export default function JobApplication() {
   return (
     <PageLayout className={isDark ? 'bg-black text-white' : 'bg-white text-black'} maxWidth="6xl" padding="none">
       {/* Header */}
-      <div className={`sticky top-0 z-10 backdrop-blur-xl border-b ${
-        isDark ? 'bg-black/80 border-gray-800' : 'bg-white/80 border-gray-200'
-      }`}>
+      <div className={`sticky top-0 z-10 backdrop-blur-xl border-b ${isDark ? 'bg-black/80 border-gray-800' : 'bg-white/80 border-gray-200'
+        }`}>
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Button
                 onClick={() => navigate(-1)}
                 variant="ghost"
-                size="sm"
+                size="small"
                 className="flex items-center space-x-2"
               >
                 <ArrowLeft className="h-4 w-4" />
                 <span>Back</span>
               </Button>
-              
+
               <div>
                 <h1 className="text-2xl font-bold">Apply for Position</h1>
                 <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
@@ -325,13 +317,13 @@ export default function JobApplication() {
                 </p>
               </div>
             </div>
-            
+
             {isLinkedInAvailable && (
               <div className="flex items-center space-x-2">
                 <Button
                   onClick={importLinkedInData}
                   variant="outlined"
-                  size="sm"
+                  size="small"
                   className="flex items-center space-x-2"
                   disabled={useLinkedInData}
                 >
@@ -350,13 +342,13 @@ export default function JobApplication() {
           <div className="lg:col-span-1">
             <Card className="p-6 sticky top-24">
               <h3 className="text-lg font-semibold mb-4">Job Summary</h3>
-              
+
               <div className="space-y-4">
                 <div>
                   <h4 className="font-bold text-xl">{job?.title}</h4>
                   <p className="text-gray-600 dark:text-gray-400">{job?.company}</p>
                 </div>
-                
+
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2 text-sm">
                     <MapPin className="h-4 w-4" />
@@ -372,7 +364,7 @@ export default function JobApplication() {
                     </div>
                   )}
                 </div>
-                
+
                 {job?.skills && job.skills.length > 0 && (
                   <div>
                     <h5 className="font-medium mb-2">Required Skills</h5>
@@ -402,7 +394,7 @@ export default function JobApplication() {
                     <User className="h-5 w-5" />
                     <span>Personal Information</span>
                   </h3>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium mb-2">First Name *</label>
@@ -420,7 +412,7 @@ export default function JobApplication() {
                         required
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium mb-2">Last Name *</label>
                       <input
@@ -437,7 +429,7 @@ export default function JobApplication() {
                         required
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium mb-2">Email *</label>
                       <input
@@ -454,7 +446,7 @@ export default function JobApplication() {
                         required
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium mb-2">Phone</label>
                       <input
@@ -479,7 +471,7 @@ export default function JobApplication() {
                     <FileText className="h-5 w-5" />
                     <span>Resume</span>
                   </h3>
-                  
+
                   <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6">
                     <input
                       type="file"
@@ -506,7 +498,7 @@ export default function JobApplication() {
                     <Mail className="h-5 w-5" />
                     <span>Cover Letter *</span>
                   </h3>
-                  
+
                   <textarea
                     value={applicationData.coverLetter}
                     onChange={(e) => setApplicationData(prev => ({
@@ -529,7 +521,7 @@ export default function JobApplication() {
                 {/* Additional Information */}
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Additional Information</h3>
-                  
+
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium mb-2">LinkedIn Profile</label>
@@ -547,7 +539,7 @@ export default function JobApplication() {
                         )}
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium mb-2">Portfolio URL</label>
                       <input
@@ -564,7 +556,7 @@ export default function JobApplication() {
                         )}
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium mb-2">Additional Notes</label>
                       <textarea
@@ -608,7 +600,7 @@ export default function JobApplication() {
                     )}
                     <span>{isSubmitting ? 'Submitting...' : 'Submit Application'}</span>
                   </Button>
-                  
+
                   {isLinkedInAvailable && job?.linkedin_job_id && (
                     <Button
                       as="a"

@@ -13,12 +13,12 @@ import {
   MoreVertical,
   CheckCircle,
   AlertCircle,
-  Clock,
-  X as XIcon
+  Clock
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useJobManagement } from '../hooks/useJobManagement';
+import { Job } from '../types';
 import Button from './ui/Button';
 import PageLayout from './ui/PageLayout';
 
@@ -30,15 +30,12 @@ export default function EmployerJobsManagement() {
     fetchEmployerJobs,
     deleteJob,
     updateJobStatus,
-    loading,
     error,
-    success,
-    clearMessages
+    success
   } = useJobManagement();
 
-  const [jobs, setJobs] = useState<any[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoadingJobs, setIsLoadingJobs] = useState(true);
-  const [selectedJob, setSelectedJob] = useState<any | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'closed' | 'draft'>('all');
 
@@ -52,6 +49,7 @@ export default function EmployerJobsManagement() {
   // Fetch jobs on mount
   useEffect(() => {
     loadJobs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadJobs = async () => {
@@ -99,7 +97,7 @@ export default function EmployerJobsManagement() {
     total: jobs.length,
     open: jobs.filter(j => j.status === 'open').length,
     applications: jobs.reduce((sum, j) => sum + (j.applications_count || 0), 0),
-    views: jobs.reduce((sum, j) => sum + (j.views_count || 0), 0)
+    views: jobs.reduce((sum, j) => sum + (j.views || 0), 0)
   };
 
   return (
@@ -109,9 +107,8 @@ export default function EmployerJobsManagement() {
       padding="none"
     >
       {/* Header */}
-      <div className={`sticky top-0 z-10 backdrop-blur-xl border-b ${
-        isDark ? 'bg-black/80 border-gray-800' : 'bg-white/80 border-gray-200'
-      }`}>
+      <div className={`sticky top-0 z-10 backdrop-blur-xl border-b ${isDark ? 'bg-black/80 border-gray-800' : 'bg-white/80 border-gray-200'
+        }`}>
         <div className="flex items-center justify-between px-4 py-3">
           <div>
             <h1 className="text-xl font-bold">Job Postings</h1>
@@ -121,9 +118,8 @@ export default function EmployerJobsManagement() {
           </div>
           <Button
             onClick={() => navigate('/post-job')}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-full font-bold ${
-              isDark ? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'
-            }`}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-full font-bold ${isDark ? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'
+              }`}
           >
             <Plus className="h-5 w-5" />
             <span>Post Job</span>
@@ -179,15 +175,14 @@ export default function EmployerJobsManagement() {
             <button
               key={filter}
               onClick={() => setStatusFilter(filter)}
-              className={`px-4 py-2 rounded-full font-medium transition-colors ${
-                statusFilter === filter
-                  ? isDark
-                    ? 'bg-info-900 text-info-100'
-                    : 'bg-info-100 text-info-800'
-                  : isDark
-                    ? 'text-gray-400 hover:text-white'
-                    : 'text-gray-600 hover:text-black'
-              }`}
+              className={`px-4 py-2 rounded-full font-medium transition-colors ${statusFilter === filter
+                ? isDark
+                  ? 'bg-info-900 text-info-100'
+                  : 'bg-info-100 text-info-800'
+                : isDark
+                  ? 'text-gray-400 hover:text-white'
+                  : 'text-gray-600 hover:text-black'
+                }`}
             >
               {filter.charAt(0).toUpperCase() + filter.slice(1)}
             </button>
@@ -205,7 +200,7 @@ export default function EmployerJobsManagement() {
           <div className="p-8 text-center">
             <Briefcase className="h-12 w-12 mx-auto text-gray-400 mb-4" />
             <div className={`text-lg font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-              {statusFilter === 'all' 
+              {statusFilter === 'all'
                 ? "No jobs posted yet. Create your first job posting!"
                 : `No ${statusFilter} jobs`}
             </div>
@@ -222,18 +217,17 @@ export default function EmployerJobsManagement() {
           filteredJobs.map(job => (
             <div
               key={job.id}
-              className={`p-4 border-b last:border-b-0 hover:transition-colors cursor-pointer ${
-                isDark
-                  ? 'hover:bg-gray-900/50 border-gray-800'
-                  : 'hover:bg-gray-50/50 border-gray-200'
-              }`}
+              className={`p-4 border-b last:border-b-0 hover:transition-colors cursor-pointer ${isDark
+                ? 'hover:bg-gray-900/50 border-gray-800'
+                : 'hover:bg-gray-50/50 border-gray-200'
+                }`}
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="text-lg font-bold truncate">{job.title}</h3>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getStatusBadgeColor(job.status)}`}>
-                      {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getStatusBadgeColor(job.status || 'draft')}`}>
+                      {(job.status || 'draft').charAt(0).toUpperCase() + (job.status || 'draft').slice(1)}
                     </span>
                   </div>
 
@@ -250,10 +244,10 @@ export default function EmployerJobsManagement() {
                         <span>{job.location}</span>
                       </div>
                     )}
-                    {job.salary_range && (
+                    {job.salary && (
                       <div className="flex items-center space-x-1">
                         <DollarSign className="h-4 w-4" />
-                        <span>{job.salary_range}</span>
+                        <span>{job.salary}</span>
                       </div>
                     )}
                     {job.deadline && (
@@ -271,11 +265,11 @@ export default function EmployerJobsManagement() {
                     </div>
                     <div className="flex items-center space-x-1 text-purple-500">
                       <Eye className="h-4 w-4" />
-                      <span>{job.views_count || 0} views</span>
+                      <span>{job.views || 0} views</span>
                     </div>
                     <div className={`flex items-center space-x-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                       <Clock className="h-4 w-4" />
-                      <span>{new Date(job.posted_at).toLocaleDateString()}</span>
+                      <span>{new Date(job.posted_date).toLocaleDateString()}</span>
                     </div>
                   </div>
                 </div>
@@ -283,32 +277,28 @@ export default function EmployerJobsManagement() {
                 <div className="flex items-center gap-2 shrink-0">
                   <div className="relative group">
                     <button
-                      className={`p-2 rounded-full ${
-                        isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
-                      }`}
+                      className={`p-2 rounded-full ${isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
+                        }`}
                     >
                       <MoreVertical className="h-5 w-5" />
                     </button>
 
                     {/* Dropdown Menu */}
-                    <div className={`absolute right-0 mt-2 w-48 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity z-10 ${
-                      isDark ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
-                    }`}>
+                    <div className={`absolute right-0 mt-2 w-48 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity z-10 ${isDark ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
+                      }`}>
                       <button
                         onClick={() => navigate(`/edit-job/${job.id}`)}
-                        className={`w-full text-left px-4 py-2 text-sm flex items-center space-x-2 ${
-                          isDark
-                            ? 'hover:bg-gray-700 border-b border-gray-700'
-                            : 'hover:bg-gray-100 border-b border-gray-200'
-                        }`}
+                        className={`w-full text-left px-4 py-2 text-sm flex items-center space-x-2 ${isDark
+                          ? 'hover:bg-gray-700 border-b border-gray-700'
+                          : 'hover:bg-gray-100 border-b border-gray-200'
+                          }`}
                       >
                         <Edit2 className="h-4 w-4" />
                         <span>Edit</span>
                       </button>
 
-                      <div className={`px-4 py-2 text-sm border-b ${
-                        isDark ? 'border-gray-700' : 'border-gray-200'
-                      }`}>
+                      <div className={`px-4 py-2 text-sm border-b ${isDark ? 'border-gray-700' : 'border-gray-200'
+                        }`}>
                         <span className={`block text-xs mb-2 font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                           Status
                         </span>
@@ -317,15 +307,14 @@ export default function EmployerJobsManagement() {
                             <button
                               key={status}
                               onClick={() => handleStatusChange(job.id, status)}
-                              className={`px-2 py-1 rounded text-xs font-medium ${
-                                job.status === status
-                                  ? isDark
-                                    ? 'bg-info-900 text-info-100'
-                                    : 'bg-info-100 text-info-800'
-                                  : isDark
-                                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                              }`}
+                              className={`px-2 py-1 rounded text-xs font-medium ${job.status === status
+                                ? isDark
+                                  ? 'bg-info-900 text-info-100'
+                                  : 'bg-info-100 text-info-800'
+                                : isDark
+                                  ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                }`}
                             >
                               {status}
                             </button>
@@ -335,9 +324,8 @@ export default function EmployerJobsManagement() {
 
                       <button
                         onClick={() => setShowDeleteConfirm(job.id)}
-                        className={`w-full text-left px-4 py-2 text-sm text-red-500 flex items-center space-x-2 ${
-                          isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
-                        }`}
+                        className={`w-full text-left px-4 py-2 text-sm text-red-500 flex items-center space-x-2 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+                          }`}
                       >
                         <Trash2 className="h-4 w-4" />
                         <span>Delete</span>
@@ -354,9 +342,8 @@ export default function EmployerJobsManagement() {
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className={`max-w-sm w-full rounded-2xl ${
-            isDark ? 'bg-black border border-gray-800' : 'bg-white border border-gray-200'
-          }`}>
+          <div className={`max-w-sm w-full rounded-2xl ${isDark ? 'bg-black border border-gray-800' : 'bg-white border border-gray-200'
+            }`}>
             <div className="p-6">
               <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 dark:bg-red-900/30 rounded-full mb-4">
                 <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-400" />

@@ -37,106 +37,100 @@ export default function InlineComments({ postId, totalReplies }: InlineCommentsP
     const [comments, setComments] = useState<Comment[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Extract the real post ID
-    const effectivePostId = postId?.startsWith('retweet_')
-        ? postId.substring(8)
-        : postId;
-
     useEffect(() => {
-        fetchComments();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [effectivePostId]);
+        const organizeComments = (comments: Comment[]): Comment[] => {
+            const commentMap = new Map<string, Comment>();
+            const rootComments: Comment[] = [];
 
-    const fetchComments = async () => {
-        try {
-            setLoading(true);
+            comments.forEach(comment => {
+                commentMap.set(comment.id, { ...comment, replies: [] });
+            });
 
-            // Fetch comments
-            const query = supabase
-                .from('comments')
-                .select('*')
-                .eq('post_id', effectivePostId)
-                .order('like_count', { ascending: false }); // Sort by likes for "top" comment logic
-
-            // If > 13 replies, we only strictly need the top one for the preview, 
-            // but to be safe and simple we can fetch a reasonable batch.
-            // However, the requirement is:
-            // <= 13: Show all
-            // > 13: Show top 1 + "Show more"
-
-            const { data: commentsData, error } = await query;
-
-            if (error) throw error;
-
-            if (commentsData && commentsData.length > 0) {
-                // Fetch profiles
-                const transformedComments: Comment[] = await Promise.all(
-                    commentsData.map(async (comment) => {
-                        const { data: profileData } = await supabase
-                            .from('profiles')
-                            .select('full_name, username, avatar_url, verified')
-                            .eq('id', comment.user_id)
-                            .single();
-
-                        return {
-                            id: comment.id,
-                            post_id: comment.post_id,
-                            user_id: comment.user_id,
-                            parent_id: comment.parent_id,
-                            content: comment.content,
-                            like_count: comment.like_count || 0,
-                            reply_count: comment.reply_count || 0,
-                            has_liked: false, // Simplified for feed view
-                            created_at: comment.created_at,
-                            author: {
-                                id: comment.user_id,
-                                name: profileData?.full_name || 'User',
-                                username: profileData?.username || `user${comment.user_id.slice(-4)}`,
-                                avatar_url: profileData?.avatar_url,
-                                verified: profileData?.verified || false
-                            },
-                            replies: []
-                        };
-                    })
-                );
-
-                // Organize into tree
-                const organizedComments = organizeComments(transformedComments);
-                setComments(organizedComments);
-            } else {
-                setComments([]);
-            }
-        } catch (error) {
-            console.error('Error fetching inline comments:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const organizeComments = (comments: Comment[]): Comment[] => {
-        const commentMap = new Map<string, Comment>();
-        const rootComments: Comment[] = [];
-
-        comments.forEach(comment => {
-            commentMap.set(comment.id, { ...comment, replies: [] });
-        });
-
-        comments.forEach(comment => {
-            if (comment.parent_id) {
-                const parent = commentMap.get(comment.parent_id);
-                if (parent) {
-                    parent.replies!.push(commentMap.get(comment.id)!);
+            comments.forEach(comment => {
+                if (comment.parent_id) {
+                    const parent = commentMap.get(comment.parent_id);
+                    if (parent) {
+                        parent.replies!.push(commentMap.get(comment.id)!);
+                    }
+                } else {
+                    rootComments.push(commentMap.get(comment.id)!);
                 }
-            } else {
-                rootComments.push(commentMap.get(comment.id)!);
-            }
-        });
+            });
 
-        // Sort root comments by likes if we are in the > 13 mode, otherwise maybe chronological?
-        // The requirement says "more views/comments/likes" for the single one.
-        // Let's stick to likes for now as it's readily available.
-        return rootComments.sort((a, b) => b.like_count - a.like_count);
-    };
+            // Sort root comments by likes if we are in the > 13 mode, otherwise maybe chronological?
+            // The requirement says "more views/comments/likes" for the single one.
+            // Let's stick to likes for now as it's readily available.
+            return rootComments.sort((a, b) => b.like_count - a.like_count);
+        };
+
+        const fetchComments = async () => {
+            try {
+                setLoading(true);
+
+                // Fetch comments
+                const query = supabase
+                    .from('comments')
+                    .select('*')
+                    .eq('post_id', postId)
+                    .order('like_count', { ascending: false }); // Sort by likes for "top" comment logic
+
+                // If > 13 replies, we only strictly need the top one for the preview, 
+                // but to be safe and simple we can fetch a reasonable batch.
+                // However, the requirement is:
+                // <= 13: Show all
+                // > 13: Show top 1 + "Show more"
+
+                const { data: commentsData, error } = await query;
+
+                if (error) throw error;
+
+                if (commentsData && commentsData.length > 0) {
+                    // Fetch profiles
+                    const transformedComments: Comment[] = await Promise.all(
+                        commentsData.map(async (comment) => {
+                            const { data: profileData } = await supabase
+                                .from('profiles')
+                                .select('full_name, username, avatar_url, verified')
+                                .eq('id', comment.user_id)
+                                .single();
+
+                            return {
+                                id: comment.id,
+                                post_id: comment.post_id,
+                                user_id: comment.user_id,
+                                parent_id: comment.parent_id,
+                                content: comment.content,
+                                like_count: comment.like_count || 0,
+                                reply_count: comment.reply_count || 0,
+                                has_liked: false, // Simplified for feed view
+                                created_at: comment.created_at,
+                                author: {
+                                    id: comment.user_id,
+                                    name: profileData?.full_name || 'User',
+                                    username: profileData?.username || `user${comment.user_id.slice(-4)}`,
+                                    avatar_url: profileData?.avatar_url,
+                                    verified: profileData?.verified || false
+                                },
+                                replies: []
+                            };
+                        })
+                    );
+
+                    // Organize into tree
+                    const organizedCommentsList = organizeComments(transformedComments);
+                    setComments(organizedCommentsList);
+                } else {
+                    setComments([]);
+                }
+            } catch (error) {
+                console.error('Error fetching inline comments:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchComments();
+    }, [postId]);
 
     const formatTimeAgo = (dateString: string) => {
         const date = new Date(dateString);
@@ -200,7 +194,7 @@ export default function InlineComments({ postId, totalReplies }: InlineCommentsP
                         className={cn("flex items-center gap-1 text-xs group", isDark ? "text-gray-500" : "text-gray-400")}
                         onClick={(e) => {
                             e.stopPropagation();
-                            navigate(`/post/${effectivePostId}`, { state: { focusReply: true } });
+                            navigate(`/post/${postId}`, { state: { focusReply: true } });
                         }}
                     >
                         <MessageCircle className="w-3.5 h-3.5 group-hover:text-blue-500 transition-colors" />
@@ -211,25 +205,12 @@ export default function InlineComments({ postId, totalReplies }: InlineCommentsP
                         className={cn("text-xs group hover:text-blue-500", isDark ? "text-gray-500" : "text-gray-400")}
                         onClick={(e) => {
                             e.stopPropagation();
-                            navigate(`/post/${effectivePostId}`, { state: { focusReply: true, replyTo: comment.id } });
+                            navigate(`/post/${postId}`, { state: { focusReply: true, replyTo: comment.id } });
                         }}
                     >
                         Reply
                     </button>
                 </div>
-
-                {/* Nested Replies - same line, no indentation */}
-                {comment.replies && comment.replies.length > 0 && (
-                    <div className="relative">
-                        {comment.replies.map((reply) => (
-                            <CommentItem
-                                key={reply.id}
-                                comment={reply}
-                                depth={depth + 1}
-                            />
-                        ))}
-                    </div>
-                )}
             </div>
         </div>
     );
@@ -281,7 +262,7 @@ export default function InlineComments({ postId, totalReplies }: InlineCommentsP
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
-                            navigate(`/post/${effectivePostId}`);
+                            navigate(`/post/${postId}`);
                         }}
                         className="text-blue-500 text-sm hover:underline font-medium"
                     >

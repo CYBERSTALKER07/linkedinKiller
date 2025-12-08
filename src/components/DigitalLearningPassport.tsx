@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { 
+import {
   BookOpen,
   Award,
   GraduationCap,
@@ -60,11 +60,11 @@ export default function DigitalLearningPassport() {
 
   const fetchDigitalPassport = async () => {
     if (!user?.id) return;
-    
+
     try {
       setLoading(true);
       setError(null);
-      
+
       const { data, error } = await supabase
         .from('digital_passports')
         .select(`
@@ -128,7 +128,7 @@ export default function DigitalLearningPassport() {
     const internshipsCount = passport.internships?.length || 0;
     const volunteerCount = passport.volunteer_work?.length || 0;
     const totalAchievements = academicCount + activitiesCount + internshipsCount + volunteerCount;
-    
+
     // Calculate completion percentage based on filled sections
     const sections = [
       academicCount > 0,
@@ -144,7 +144,7 @@ export default function DigitalLearningPassport() {
     return {
       totalAchievements,
       skillsAssessed: 15, // This would come from skills audit system
-      hoursLogged: passport.internships?.reduce((sum, internship) => 
+      hoursLogged: passport.internships?.reduce((sum, internship) =>
         sum + (internship.duration_weeks * 40), 0) || 0,
       badgesEarned: passport.digital_badges?.length || 0,
       portfolioItems: passport.portfolio_items?.length || 0,
@@ -231,82 +231,69 @@ export default function DigitalLearningPassport() {
             <Typography variant="h5" className="font-bold">
               Learning Journey Progress
             </Typography>
-            <div className={`px-4 py-2 rounded-full text-sm font-medium ${
-              isDark ? 'bg-lime/10 text-lime' : 'bg-asu-maroon/10 text-asu-maroon'
-            }`}>
+            <div className={`px-4 py-2 rounded-full text-sm font-medium ${isDark ? 'bg-lime/10 text-lime' : 'bg-asu-maroon/10 text-asu-maroon'
+              }`}>
               {passportStats.overallProgress}% Complete
             </div>
           </div>
-          
-          <div className={`w-full bg-gray-200 rounded-full h-3 mb-6 ${
-            isDark ? 'bg-gray-700' : 'bg-gray-200'
-          }`}>
-            <div 
-              className={`h-3 rounded-full transition-all duration-1000 ${
-                isDark ? 'bg-linear-to-r from-lime to-green-400' : 'bg-linear-to-r from-asu-maroon to-red-600'
-              }`}
+
+          <div className={`w-full bg-gray-200 rounded-full h-3 mb-6 ${isDark ? 'bg-gray-700' : 'bg-gray-200'
+            }`}>
+            <div
+              className={`h-3 rounded-full transition-all duration-1000 ${isDark ? 'bg-linear-to-r from-lime to-green-400' : 'bg-linear-to-r from-asu-maroon to-red-600'
+                }`}
               style={{ width: `${passportStats.overallProgress}%` }}
             ></div>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
             <div className="text-center">
-              <div className={`text-3xl font-bold mb-1 ${
-                isDark ? 'text-lime' : 'text-asu-maroon'
-              }`}>
+              <div className={`text-3xl font-bold mb-1 ${isDark ? 'text-lime' : 'text-asu-maroon'
+                }`}>
                 {passportStats.totalAchievements}
               </div>
-              <div className={`text-sm ${
-                isDark ? 'text-dark-muted' : 'text-gray-600'
-              }`}>
+              <div className={`text-sm ${isDark ? 'text-dark-muted' : 'text-gray-600'
+                }`}>
                 Achievements
               </div>
             </div>
             <div className="text-center">
-              <div className={`text-3xl font-bold mb-1 ${
-                isDark ? 'text-lime' : 'text-asu-maroon'
-              }`}>
+              <div className={`text-3xl font-bold mb-1 ${isDark ? 'text-lime' : 'text-asu-maroon'
+                }`}>
                 {passportStats.skillsAssessed}
               </div>
-              <div className={`text-sm ${
-                isDark ? 'text-dark-muted' : 'text-gray-600'
-              }`}>
+              <div className={`text-sm ${isDark ? 'text-dark-muted' : 'text-gray-600'
+                }`}>
                 Skills Assessed
               </div>
             </div>
             <div className="text-center">
-              <div className={`text-3xl font-bold mb-1 ${
-                isDark ? 'text-lime' : 'text-asu-maroon'
-              }`}>
+              <div className={`text-3xl font-bold mb-1 ${isDark ? 'text-lime' : 'text-asu-maroon'
+                }`}>
                 {passportStats.hoursLogged}
               </div>
-              <div className={`text-sm ${
-                isDark ? 'text-dark-muted' : 'text-gray-600'
-              }`}>
+              <div className={`text-sm ${isDark ? 'text-dark-muted' : 'text-gray-600'
+                }`}>
                 Hours Logged
               </div>
             </div>
             <div className="text-center">
-              <div className={`text-3xl font-bold mb-1 ${
-                isDark ? 'text-lime' : 'text-asu-maroon'
-              }`}>
+              <div className={`text-3xl font-bold mb-1 ${isDark ? 'text-lime' : 'text-asu-maroon'
+                }`}>
                 {passportStats.badgesEarned}
               </div>
-              <div className={`text-sm ${
-                isDark ? 'text-dark-muted' : 'text-gray-600'
-              }`}>
+              <div className={`text-sm ${isDark ? 'text-dark-muted' : 'text-gray-600'
+                }`}>
                 Badges Earned
               </div>
             </div>
             <div className="text-center">
-              <div className={`text-3xl font-bold mb-1 ${
-                isDark ? 'text-lime' : 'text-asu-maroon'
-              }`}>
+              <div className={`text-3xl font-bold mb-1 ${isDark ? 'text-lime' : 'text-asu-maroon'
+                }`}>
                 {passportStats.portfolioItems}
               </div>
-              <div className={`text-sm ${
-                isDark ? 'text-dark-muted' : 'text-gray-600'
-              }`}>
+              <div className={`text-sm ${isDark ? 'text-dark-muted' : 'text-gray-600'
+                }`}>
                 Portfolio Items
               </div>
             </div>
@@ -320,7 +307,7 @@ export default function DigitalLearningPassport() {
           <Typography variant="h5" className="font-bold mb-6">
             Recent Activity
           </Typography>
-          
+
           <div className="space-y-4">
             <div className="flex items-center space-x-4 p-4 rounded-lg bg-green-50 dark:bg-green-900/20">
               <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
@@ -331,7 +318,7 @@ export default function DigitalLearningPassport() {
                 <div className="text-sm text-gray-600 dark:text-gray-400">2 days ago</div>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-4 p-4 rounded-lg bg-info-50 dark:bg-info-900/20">
               <div className="w-10 h-10 bg-info-500 rounded-full flex items-center justify-center">
                 <Award className="h-5 w-5 text-white" />
@@ -341,7 +328,7 @@ export default function DigitalLearningPassport() {
                 <div className="text-sm text-gray-600 dark:text-gray-400">1 week ago</div>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-4 p-4 rounded-lg bg-purple-50 dark:bg-purple-900/20">
               <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
                 <FileText className="h-5 w-5 text-white" />
@@ -359,13 +346,11 @@ export default function DigitalLearningPassport() {
 
   if (loading) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${
-        isDark ? 'bg-dark-bg' : 'bg-gray-50'
-      }`}>
+      <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-dark-bg' : 'bg-gray-50'
+        }`}>
         <div className="text-center">
-          <div className={`animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4 ${
-            isDark ? 'border-lime' : 'border-asu-maroon'
-          }`}></div>
+          <div className={`animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4 ${isDark ? 'border-lime' : 'border-asu-maroon'
+            }`}></div>
           <Typography variant="body1" color="textSecondary">
             Loading your Digital Learning Passport...
           </Typography>
@@ -399,9 +384,8 @@ export default function DigitalLearningPassport() {
       <div className={`min-h-screen ${isDark ? 'bg-dark-bg' : 'bg-gray-50'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <Card className="p-12 text-center">
-            <BookOpen className={`h-16 w-16 mx-auto mb-4 ${
-              isDark ? 'text-dark-muted' : 'text-gray-400'
-            }`} />
+            <BookOpen className={`h-16 w-16 mx-auto mb-4 ${isDark ? 'text-dark-muted' : 'text-gray-400'
+              }`} />
             <Typography variant="h5" className="font-medium mb-2">
               Create Your Digital Learning Passport
             </Typography>
@@ -418,11 +402,10 @@ export default function DigitalLearningPassport() {
   }
 
   return (
-    <div ref={containerRef} className={`min-h-screen transition-colors duration-300 ${
-      isDark ? 'bg-dark-bg' : 'bg-gray-50'
-    }`}>
+    <div ref={containerRef} className={`min-h-screen transition-colors duration-300 ${isDark ? 'bg-dark-bg' : 'bg-gray-50'
+      }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
+
         {/* Header */}
         <div className="passport-header mb-8">
           <div className="flex items-center justify-between">
@@ -452,12 +435,10 @@ export default function DigitalLearningPassport() {
         <div className="grid grid-cols-1 md:grid-cols-6 gap-6 mb-8">
           <div className="stats-card">
             <Card className="p-6 text-center" elevation={1}>
-              <div className={`w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center ${
-                isDark ? 'bg-lime/10' : 'bg-asu-maroon/10'
-              }`}>
-                <Trophy className={`h-6 w-6 ${
-                  isDark ? 'text-lime' : 'text-asu-maroon'
-                }`} />
+              <div className={`w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center ${isDark ? 'bg-lime/10' : 'bg-asu-maroon/10'
+                }`}>
+                <Trophy className={`h-6 w-6 ${isDark ? 'text-lime' : 'text-asu-maroon'
+                  }`} />
               </div>
               <Typography variant="h4" className="font-bold mb-1">
                 {passportStats.totalAchievements}
@@ -548,19 +529,16 @@ export default function DigitalLearningPassport() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`passport-tab flex items-center space-x-2 px-6 py-4 font-medium transition-all duration-300 ${
-                    activeTab === tab.id
-                      ? `border-b-2 ${
-                          isDark 
-                            ? 'border-lime text-lime bg-lime/5' 
-                            : 'border-asu-maroon text-asu-maroon bg-asu-maroon/5'
-                        }`
-                      : `${
-                          isDark 
-                            ? 'text-dark-muted hover:text-dark-text hover:bg-dark-surface' 
-                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                        }`
-                  }`}
+                  className={`passport-tab flex items-center space-x-2 px-6 py-4 font-medium transition-all duration-300 ${activeTab === tab.id
+                      ? `border-b-2 ${isDark
+                        ? 'border-lime text-lime bg-lime/5'
+                        : 'border-asu-maroon text-asu-maroon bg-asu-maroon/5'
+                      }`
+                      : `${isDark
+                        ? 'text-dark-muted hover:text-dark-text hover:bg-dark-surface'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                      }`
+                    }`}
                 >
                   <Icon className="h-5 w-5" />
                   <span>{tab.label}</span>
@@ -574,16 +552,14 @@ export default function DigitalLearningPassport() {
         {/* Tab Content */}
         <div className="tab-content">
           {activeTab === 'overview' && renderOverview()}
-          
+
           {activeTab !== 'overview' && (
             <Card className="p-8" elevation={2}>
               <div className="text-center py-12">
-                <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${
-                  isDark ? 'bg-lime/10' : 'bg-asu-maroon/10'
-                }`}>
-                  <BookOpen className={`h-8 w-8 ${
-                    isDark ? 'text-lime' : 'text-asu-maroon'
-                  }`} />
+                <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${isDark ? 'bg-lime/10' : 'bg-asu-maroon/10'
+                  }`}>
+                  <BookOpen className={`h-8 w-8 ${isDark ? 'text-lime' : 'text-asu-maroon'
+                    }`} />
                 </div>
                 <Typography variant="h5" className="font-bold mb-2">
                   {tabs.find(t => t.id === activeTab)?.label} Section
