@@ -44,6 +44,66 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+const MOCK_AUTH_STORAGE_KEY = 'linkedinkiller_mock_auth_user';
+const MOCK_AUTH_PASSWORD = 'password123';
+
+const mockUsers: Array<{ email: string; password: string; role: User['role']; full_name: string; username: string }> = [
+  { email: 'student@example.com', password: MOCK_AUTH_PASSWORD, role: 'student', full_name: 'Demo Student', username: 'demo-student' },
+  { email: 'employer@example.com', password: MOCK_AUTH_PASSWORD, role: 'employer', full_name: 'Demo Employer', username: 'demo-employer' },
+  { email: 'admin@example.com', password: MOCK_AUTH_PASSWORD, role: 'admin', full_name: 'Demo Admin', username: 'demo-admin' },
+];
+
+const getStoredMockUser = (): User | null => {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const rawUser = window.localStorage.getItem(MOCK_AUTH_STORAGE_KEY);
+    return rawUser ? JSON.parse(rawUser) as User : null;
+  } catch {
+    return null;
+  }
+};
+
+const saveStoredMockUser = (user: User | null) => {
+  if (typeof window === 'undefined') return;
+
+  if (user) {
+    window.localStorage.setItem(MOCK_AUTH_STORAGE_KEY, JSON.stringify(user));
+  } else {
+    window.localStorage.removeItem(MOCK_AUTH_STORAGE_KEY);
+  }
+};
+
+const getMockUserForCredentials = (email: string, password: string): User | null => {
+  const mockUser = mockUsers.find((candidate) => candidate.email.toLowerCase() === email.trim().toLowerCase() && candidate.password === password);
+
+  if (!mockUser) return null;
+
+  const profile: UserProfile = {
+    id: `mock-${mockUser.username}`,
+    username: mockUser.username,
+    full_name: mockUser.full_name,
+    bio: 'Mock account for local development',
+    avatar_url: null,
+    website: null,
+    role: mockUser.role,
+    company_name: mockUser.role === 'employer' ? 'Mock Company' : null,
+    title: mockUser.role === 'employer' ? 'Hiring Manager' : null,
+    location: 'Remote',
+    verified: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    subscription_tier: mockUser.role === 'admin' ? 'university_premium' : 'student_premium',
+  };
+
+  return {
+    id: profile.id,
+    email: mockUser.email,
+    role: mockUser.role,
+    profile,
+  };
+};
+
 // Cache for profile data to avoid redundant queries
 const profileCache = new Map<string, UserProfile>();
 
@@ -163,6 +223,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Check active sessions and sets the user
     const initAuth = async () => {
       try {
+        const storedMockUser = getStoredMockUser();
+        if (storedMockUser) {
+          setUser(storedMockUser);
+          setLoading(false);
+          return;
+        }
+
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           await loadUserProfile(session.user);
@@ -238,6 +305,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signIn = async (email: string, password: string): Promise<{ error: Error | null }> => {
     try {
       setLoading(true);
+
+      const mockUser = getMockUserForCredentials(email, password);
+      if (mockUser) {
+        saveStoredMockUser(mockUser);
+        setUser(mockUser);
+        setLoading(false);
+        return { error: null };
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -321,6 +397,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signOut = async () => {
     try {
       setLoading(true);
+
+      const storedMockUser = getStoredMockUser();
+      if (storedMockUser) {
+        saveStoredMockUser(null);
+        setUser(null);
+        profileCache.clear();
+        authInitializedRef.current = false;
+        setLoading(false);
+        return;
+      }
+
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       setUser(null);
